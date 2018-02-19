@@ -1,0 +1,27 @@
+opam-version: "1.2"
+maintainer: "Carmelo Piccione <carmelo.piccione@struktured.io>"
+authors: "Carmelo Piccione"
+homepage: "https://github.com/struktured/ocaml-gemini"
+license: "MIT"
+
+build: [
+  ["jbuilder" "build" "-p" name "-j" jobs]
+]
+
+build-test: [
+  ["bin/run_test.ml" name]
+]
+
+depends: [
+  "async" {>= "v0.10.0"}
+  "cohttp-async"
+  "jbuilder" {build}
+  "ppx_jane"
+  "uri"
+  "yojson"
+  "zarith"
+]
+
+available: [
+  ocaml-version >= "4.06.0"
+]

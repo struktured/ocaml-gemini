@@ -1,0 +1,27 @@
+(jbuild_version 1)
+
+(library (
+  (name gemini)
+  (public_name gemini)
+  (flags (
+    :standard
+    -unsafe-string
+    -open Core
+    -open Async
+  ))
+  (preprocess (pps (ppx_jane
+    ppx_deriving_yojson)))
+  (synopsis "Gemini REST Client for OCaml")
+  (library_flags (-linkall))
+  (libraries (
+              async
+              cohttp-async
+              jbuilder
+              ppx_jane
+              ppx_deriving_yojson.runtime
+              uri
+              yojson
+              zarith
+              )
+  )
+))
