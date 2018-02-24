@@ -194,7 +194,7 @@ struct
       order_id:string;
     } [@@deriving yojson, sexp]
 
-    type t = {
+    type response = {
       order_id : string;
       id : string;
       symbol : Symbol.t; (*I"btcusd",*)
@@ -243,7 +243,38 @@ type	string	The order type. Only "exchange limit" supported through this API
 options	array	Optional. An optional array containing at most one supported order
 execution option. See Order execution options for details.
    *)
-    type response = Status.t [@@deriving yojson, sexp]
+    type response = Status.response [@@deriving yojson, sexp]
+  end
+
+  module Cancel = struct
+    let operation = "cancel"
+
+    let sub_operation =
+      sprintf "%s/%s" operation
+
+
+    type request = {request:string;noonce:string;
+                    order_id:string} [@@deriving sexp, yojson]
+
+    type response = Status.response [@@deriving sexp, yojson]
+
+    module All = struct
+      let operation =
+        sub_operation "all"
+      type request =
+        {request:string;noonce:string} [@@deriving sexp, yojson]
+      type response = {result:bool} [@@deriving sexp, yojson]
+    end
+
+    module Session = struct
+      let operation =
+        sub_operation "session"
+      type request =
+        {request:string;noonce:string} [@@deriving sexp, yojson]
+      type response = {result:bool} [@@deriving sexp, yojson]
+    end
+
+
   end
 end
 
