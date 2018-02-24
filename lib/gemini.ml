@@ -8,7 +8,7 @@ let version = "v1"
 let method_ = `Post
 
 let path_with_version ?(version=version)
-    ~entity operation =
+    ~entity ~operation =
   sprintf "%s/%s/%s"
     version
     entity
@@ -18,32 +18,32 @@ module Symbol = struct
   type t = [`Btc_usd | `Eth_usd | `Eth_btc] [@@deriving sexp]
 
   let of_yojson json =
-  match json with
-  | `String s ->
-    (match String.lowercase s with
-    | "btcusd" -> Result.Ok `Btc_usd
-    | "ethusd" -> Result.Ok `Eth_usd
-    | "ethbtc" -> Result.Ok `Eth_btc
-    | (_:string) ->
+    match json with
+    | `String s ->
+      (match String.lowercase s with
+       | "btcusd" -> Result.Ok `Btc_usd
+       | "ethusd" -> Result.Ok `Eth_usd
+       | "ethbtc" -> Result.Ok `Eth_btc
+       | (_:string) ->
+         Result.Error
+           (
+             sprintf
+               "symbol must be \"btcusd, ethusd, or ethbtc\", but got %s"
+               s
+           )
+      )
+    | #Yojson.Safe.json as json ->
       Result.Error
         (
           sprintf
-            "symbol must be \"btcusd, ethusd, or ethbtc\", but got %s"
-            s
+            "symbol must be a json string, but got %s"
+            (Yojson.Safe.to_string json)
         )
-    )
-  | #Yojson.Safe.json as json ->
-    Result.Error
-      (
-        sprintf
-          "symbol must be a json string, but got %s"
-          (Yojson.Safe.to_string json)
-      )
 
-let to_yojson = function
-  | `Btc_usd -> `String "btcusd"
-  | `Eth_usd -> `String "ethusd"
-  | `Eth_btc -> `String "ethbtc"
+  let to_yojson = function
+    | `Btc_usd -> `String "btcusd"
+    | `Eth_usd -> `String "ethusd"
+    | `Eth_btc -> `String "ethbtc"
 
 end
 
@@ -52,125 +52,125 @@ module Exchange = struct
 
   type t = [`Gemini] [@@deriving sexp]
 
-let of_yojson json =
-  match json with
-  | `String s ->
-    (match String.lowercase s with
-    | "gemini" -> Result.Ok `Gemini
-    | (_:string) ->
+  let of_yojson json =
+    match json with
+    | `String s ->
+      (match String.lowercase s with
+       | "gemini" -> Result.Ok `Gemini
+       | (_:string) ->
+         Result.Error
+           (
+             sprintf
+               "exchange must be \"gemini\", but got %s"
+               s
+           )
+      )
+    | #Yojson.Safe.json as json ->
       Result.Error
         (
           sprintf
-            "exchange must be \"gemini\", but got %s"
-            s
+            "exchange must be a json string, but got %s"
+            (Yojson.Safe.to_string json)
         )
-    )
-  | #Yojson.Safe.json as json ->
-    Result.Error
-      (
-        sprintf
-          "exchange must be a json string, but got %s"
-          (Yojson.Safe.to_string json)
-      )
 
-let to_yojson = function
-  | `Gemini -> `String "gemini"
+  let to_yojson = function
+    | `Gemini -> `String "gemini"
 end
 
 module Side =
 struct
-type t = [`Buy | `Sell] [@@deriving sexp]
+  type t = [`Buy | `Sell] [@@deriving sexp]
 
-let of_yojson json =
-  match json with
-  | `String s ->
-    (match String.lowercase s with
-    | "buy" -> Result.Ok `Buy
-    | "sell" -> Result.Ok `Sell
-    | (_:string) ->
+  let of_yojson json =
+    match json with
+    | `String s ->
+      (match String.lowercase s with
+       | "buy" -> Result.Ok `Buy
+       | "sell" -> Result.Ok `Sell
+       | (_:string) ->
+         Result.Error
+           (
+             sprintf
+               "side must be one of \"buy\" or \"sell\", but got %s"
+               s
+           )
+      )
+    | #Yojson.Safe.json as json ->
       Result.Error
         (
           sprintf
-            "side must be one of \"buy\" or \"sell\", but got %s"
-            s
+            "side must be a json string, but got %s"
+            (Yojson.Safe.to_string json)
         )
-    )
-  | #Yojson.Safe.json as json ->
-    Result.Error
-      (
-        sprintf
-          "side must be a json string, but got %s"
-          (Yojson.Safe.to_string json)
-      )
 
-let to_yojson = function
-  | `Buy -> `String "buy"
-  | `Sell -> `String "sell"
+  let to_yojson = function
+    | `Buy -> `String "buy"
+    | `Sell -> `String "sell"
 end
 
 module Order_type = struct
-type t = [`Exchange_limit] [@@deriving sexp]
+  type t = [`Exchange_limit] [@@deriving sexp]
 
-let of_yojson json =
-  match json with
-  | `String s ->
-    (match String.lowercase s with
-    | "exchange_limit" -> Result.Ok `Exchange_limit
-    | (_:string) ->
+  let of_yojson json =
+    match json with
+    | `String s ->
+      (match String.lowercase s with
+       | "exchange_limit" -> Result.Ok `Exchange_limit
+       | (_:string) ->
+         Result.Error
+           (
+             sprintf
+               "order_type must be \"exchange_limit\", but got %s"
+               s
+           )
+      )
+    | #Yojson.Safe.json as json ->
       Result.Error
         (
           sprintf
-            "order_type must be \"exchange_limit\", but got %s"
-            s
+            "order_type must be a json string, but got %s"
+            (Yojson.Safe.to_string json)
         )
-    )
-  | #Yojson.Safe.json as json ->
-    Result.Error
-      (
-        sprintf
-          "order_type must be a json string, but got %s"
-          (Yojson.Safe.to_string json)
-      )
 
-let to_yojson = function
-  | `Exchange_limit -> `String "exchange_limit"
+  let to_yojson = function
+    | `Exchange_limit -> `String "exchange_limit"
 end
 
 module Order_execution_option = struct
 
-type t =
-  [`Maker_or_cancel
-  |`Immediate_or_cancel
-  |`Auction_only
-  ] [@@deriving sexp]
+  type t =
+    [`Maker_or_cancel
+    |`Immediate_or_cancel
+    |`Auction_only
+    ] [@@deriving sexp]
 
-let of_yojson json =
-  match json with
-  | `String s ->
-    (match String.lowercase s with
-    | "maker_or_cancel" -> Result.Ok `Maker_or_cancel
-    | "immediate_or_cancel" -> Result.Ok `Immediate_or_cancel
-    | "auction_only" -> Result.Ok `Auction_only
-    | (_:string) ->
+  let of_yojson json =
+    match json with
+    | `String s ->
+      (match String.lowercase s with
+       | "maker_or_cancel" -> Result.Ok `Maker_or_cancel
+       | "immediate_or_cancel" -> Result.Ok `Immediate_or_cancel
+       | "auction_only" -> Result.Ok `Auction_only
+       | (_:string) ->
+         Result.Error
+           (
+             sprintf
+               "order_execution_option must be \"exchange_limit\", but got %s"
+               s
+           )
+      )
+    | #Yojson.Safe.json as json ->
       Result.Error
         (
           sprintf
-            "order_execution_option must be \"exchange_limit\", but got %s"
-            s
+            "order_execution_option must be a json string, but got %s"
+            (Yojson.Safe.to_string json)
         )
-    )
-  | #Yojson.Safe.json as json ->
-    Result.Error
-      (
-        sprintf
-          "order_execution_option must be a json string, but got %s"
-          (Yojson.Safe.to_string json)
-      )
 
-let to_yojson : t -> Yojson.Safe.json = function
-  | `Maker_or_cancel -> `String "maker_or_cancel"
-  | `Immediate_or_cancel -> `String "immediate_or_cancel"
-  | `Auction_only -> `String "auction_only"
+  let to_yojson : t -> Yojson.Safe.json = function
+    | `Maker_or_cancel -> `String "maker_or_cancel"
+    | `Immediate_or_cancel -> `String "immediate_or_cancel"
+    | `Auction_only -> `String "auction_only"
 
 end
 
@@ -181,9 +181,9 @@ struct
     path_with_version ?version ~entity
 
   let uri ?version operation =
-      Uri.make
-        ~host
-        ~path:(path_with_version ?version operation)
+    Uri.make
+      ~host
+      ~path:(path_with_version ?version ~operation)
 
   module Status = struct
     let operation = "status"
@@ -246,4 +246,76 @@ execution option. See Order execution options for details.
     type response = Status.t [@@deriving yojson, sexp]
   end
 end
+
+
+module Entity = struct
+
+  module type S = sig
+    val name : string
+  end
+end
+
+module Operation = struct
+
+  module type S = sig
+    module Entity : Entity.S
+    val name : string
+    type request [@@deriving sexp]
+    type response [@@deriving sexp]
+    val yojson_of_request : request -> Yojson.Safe.json
+    val response_of_yojson : Yojson.Safe.json ->
+      (response, string) Result.t
+
+  end
+
+end
+
+let post
+    (type request)
+    (type response)
+    (module Operation : Operation.S with
+      type request = request and type response = response)
+    (request:request) =
+  let request_body =
+    Operation.yojson_of_request request |> Yojson.Safe.to_string in
+  let body = Cohttp_async.Body.of_string request_body in
+  let uri = Uri.make
+      ~scheme:"https"
+      ~host
+      ~path:
+        (path_with_version ?version:None
+           ~entity:Operation.Entity.name
+           ~operation:Operation.name
+        )
+      ?query:None
+      () in
+  Cohttp_async.Client.post
+    ?headers:None
+    ?chunked:None
+    ?interrupt:None
+    ?ssl_config:None
+    ~body
+    uri >>= fun (response, body) ->
+  match Cohttp.Response.status response with
+  | `OK ->
+    (
+      Cohttp_async.Body.to_string body
+      >>|
+      ( fun s ->
+          let yojson = Yojson.Safe.from_string s in
+          let response = Operation.response_of_yojson yojson in
+          match response with
+          | Result.Ok ok -> `Ok ok
+          | Result.Error e -> `Json_parse_error e
+      )
+    )
+  | `Not_found -> return `Not_found
+  | `Bad_request -> return `Bad_request
+  | `Unauthorized -> return `Unauthorized
+  | (code : Cohttp.Code.status_code) -> failwiths "unexpected status code"
+                                          code Cohttp.Code.sexp_of_status_code
+
+
+
+
 
