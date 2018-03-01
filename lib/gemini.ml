@@ -3,12 +3,34 @@ open Async
 
 type decimal = string [@@deriving yojson, sexp]
 
-let host = "api.gemini.com"
-let version = "v1"
+let sandbox_host = "api.sandbox.gemini.com"
+let production_host = "api.gemini.com"
+
+module Cfg = struct
+  let version_1 = "v1"
+
+  module type S = sig
+    val version : string
+    val api_host : string
+  end
+
+  module Sandbox : S = struct
+    let version = version_1
+    let api_host = "api.sandbox.gemini.com"
+  end
+
+  module Production : S = struct
+    let version = version_1
+    let api_host = "api.gemini.com"
+  end
+
+end
 let method_ = `Post
 
-let path_with_version ?(version=version)
-    ~entity ~operation =
+let path_with_version
+    ~version
+    ~entity
+    ~operation =
   sprintf "%s/%s/%s"
     version
     entity
@@ -177,13 +199,13 @@ end
 module Order =
 struct
   let entity = "order"
-  let path_with_version ?version =
-    path_with_version ?version ~entity
+  let path_with_version ~version =
+    path_with_version ~version ~entity
 
-  let uri ?version operation =
+  let uri ~version ~operation ~host =
     Uri.make
       ~host
-      ~path:(path_with_version ?version ~operation)
+      ~path:(path_with_version ~version ~operation)
 
   module Status = struct
     let operation = "status"
@@ -304,6 +326,7 @@ end
 let post
     (type request)
     (type response)
+    (module Cfg : Cfg.S)
     (module Operation : Operation.S with
       type request = request and type response = response)
     (request:request) =
@@ -312,9 +335,9 @@ let post
   let body = Cohttp_async.Body.of_string request_body in
   let uri = Uri.make
       ~scheme:"https"
-      ~host
+      ~host:Cfg.api_host
       ~path:
-        (path_with_version ?version:None
+        (path_with_version ~version:Cfg.version
            ~entity:Operation.Entity.name
            ~operation:Operation.name
         )
@@ -340,11 +363,12 @@ let post
           | Result.Error e -> `Json_parse_error e
       )
     )
-  | `Not_found -> return `Not_found
-  | `Bad_request -> return `Bad_request
-  | `Unauthorized -> return `Unauthorized
-  | (code : Cohttp.Code.status_code) -> failwiths "unexpected status code"
-                                          code Cohttp.Code.sexp_of_status_code
+  | `Not_found
+  | `Bad_request
+  | `Unauthorized as error -> return error
+  | (code : Cohttp.Code.status_code) ->
+    failwiths "unexpected status code"
+      code Cohttp.Code.sexp_of_status_code
 
 
 

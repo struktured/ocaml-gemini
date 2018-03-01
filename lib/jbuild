@@ -4,8 +4,7 @@
   (name gemini)
   (public_name gemini)
   (flags (
-    :standard
-    -unsafe-string
+    :standard -w -39
     -open Core
     -open Async
   ))
@@ -17,7 +16,6 @@
               async
               cohttp-async
               jbuilder
-              ppx_jane
               ppx_deriving_yojson.runtime
               uri
               yojson
