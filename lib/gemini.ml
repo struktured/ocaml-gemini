@@ -6,23 +6,61 @@ type decimal = string [@@deriving yojson, sexp]
 let sandbox_host = "api.sandbox.gemini.com"
 let production_host = "api.gemini.com"
 
+module Auth = struct
+
+  let to_hex _ = failwith "use cryptokit"
+
+  let hmac_sha384 ~api_secret _payload
+    = failwith "use cryptokit"
+
+end
 module Cfg = struct
+
+  let param ?default ~name ~env () =
+    let name = sprintf "GEMINI_%s_%s" env name in
+    match Unix.getenv name with
+    | Some param -> param
+    | None ->
+      match default with
+      | None ->
+        failwithf "Environment variable \"%s\" must be specified"
+          name ()
+      | Some default -> default
+
+  let host ~env =
+    sprintf "api.%s.gemini.com" env
   let version_1 = "v1"
 
   module type S = sig
     val version : string
     val api_host : string
+    val api_key : string
+    val api_secret : string
   end
 
-  module Sandbox : S = struct
-    let version = version_1
-    let api_host = "api.sandbox.gemini.com"
-  end
+  let api_key = param ~name:"API_KEY"
+  let api_secret = param ~name:"API_SECRET"
 
-  module Production : S = struct
-    let version = version_1
-    let api_host = "api.gemini.com"
-  end
+  let make env =
+    let module M = struct
+      let env = env
+      let param = param ~env
+      let version = version_1
+      let api_host = host ~env
+      let api_key = api_key ~env ()
+      let api_secret = api_secret ~env ()
+    end in
+  (module M : S)
+
+  module Sandbox =
+    struct
+      include (val make "sandbox" : S)
+    end
+
+  module Production =
+    struct
+      include (val make "production" : S)
+    end
 
 end
 let method_ = `Post
@@ -295,8 +333,6 @@ execution option. See Order execution options for details.
         {request:string;noonce:string} [@@deriving sexp, yojson]
       type response = {result:bool} [@@deriving sexp, yojson]
     end
-
-
   end
 end
 
@@ -330,9 +366,22 @@ let post
     (module Operation : Operation.S with
       type request = request and type response = response)
     (request:request) =
-  let request_body =
-    Operation.yojson_of_request request |> Yojson.Safe.to_string in
-  let body = Cohttp_async.Body.of_string request_body in
+  let payload =
+    Operation.yojson_of_request request |>
+    Yojson.Safe.to_string |>
+    B64.encode ~pad:true ?alphabet:None in
+  let headers =
+    Cohttp.Header.of_list
+      ["X-GEMINI-PAYLOAD", payload;
+       "X-GEMINI-APIKEY", Cfg.api_key;
+       "X-GEMINI-SIGNATURE",
+       Auth.to_hex
+         (Auth.hmac_sha384
+            ~api_secret:Cfg.api_secret
+            payload
+         )
+      ]
+  in
   let uri = Uri.make
       ~scheme:"https"
       ~host:Cfg.api_host
@@ -344,11 +393,11 @@ let post
       ?query:None
       () in
   Cohttp_async.Client.post
-    ?headers:None
+    ~headers
     ?chunked:None
     ?interrupt:None
     ?ssl_config:None
-    ~body
+    ?body:None
     uri >>= fun (response, body) ->
   match Cohttp.Response.status response with
   | `OK ->
