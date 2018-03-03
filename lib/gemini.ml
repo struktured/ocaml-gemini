@@ -429,7 +429,8 @@ let post
   >>= fun payload ->
   let headers =
     Cohttp.Header.of_list
-      ["X-GEMINI-PAYLOAD", Auth.to_string payload;
+      ["Content-Type", "text/plain";
+       "X-GEMINI-PAYLOAD", Auth.to_string payload;
        "X-GEMINI-APIKEY", Cfg.api_key;
        "X-GEMINI-SIGNATURE",
          Auth.(
