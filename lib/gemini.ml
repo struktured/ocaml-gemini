@@ -3,9 +3,6 @@ open Async
 
 type decimal = string [@@deriving yojson, sexp]
 
-let sandbox_host = "api.sandbox.gemini.com"
-let production_host = "api.gemini.com"
-
 module Auth = struct
 
  let base64 s = Cstruct.of_string s |> Nocrypto.Base64.encode
