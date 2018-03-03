@@ -79,17 +79,17 @@ module Cfg = struct
       let api_key = api_key ~env ()
       let api_secret = api_secret ~env ()
     end in
-  (module M : S)
+    (module M : S)
 
   module Sandbox () =
-    struct
-      include (val make "sandbox" : S)
-    end
+  struct
+    include (val make "sandbox" : S)
+  end
 
   module Production () =
-    struct
-      include (val make "production" : S)
-     end
+  struct
+    include (val make "production" : S)
+  end
 
 end
 
@@ -262,117 +262,15 @@ module Order_execution_option = struct
 
 end
 
-module Order =
-struct
-  let entity = "order"
-  let path_with_version ~version =
-    path_with_version ~version ~entity
-
-  let uri ~version ~operation ~host =
-    Uri.make
-      ~host
-      ~path:(path_with_version ~version ~operation)
-
-  module Status = struct
-    let operation = "status"
-
-    type request = {
-      order_id:string;
-    } [@@deriving yojson, sexp]
-
-    type response = {
-      order_id : string;
-      id : string;
-      symbol : Symbol.t; (*I"btcusd",*)
-      exchange : Exchange.t ;(*gemini*)
-      avg_execution_price : decimal;
-      side : Side.t;
-      type_ : Order_type.t;
-      timestamp : string;
-      timestampms : int;
-      is_live : bool;
-      is_cancelled : bool;
-      is_hidden : bool;
-      was_forced : bool;
-      executed_amount : int;
-      remaining_amount: int;
-      options: Order_execution_option.t list;
-      price : decimal;
-      original_amount : decimal;
-    } [@@deriving yojson, sexp]
-  end
-
-  module New = struct
-    let operation = "new"
-
-    type request = {
-      client_order_id:string;
-      symbol:string;
-      amount:string;
-      price:decimal; (* zarith *)
-      side:Side.t;
-      type_:Order_type.t [@name "type"];
-      options: Order_execution_option.t
-    } [@@deriving sexp, yojson]
-
-(*
-request	string	The literal string "/v1/order/new"
-nonce	integer	The nonce, as described in Private API Invocation
-client_order_id	string	Recommended. A client-specified order id
-symbol	string	The symbol for the new order
-amount	string	Quoted decimal amount to purchase
-price	string	Quoted decimal amount to spend per unit
-side	string	"buy" or "sell"
-type	string	The order type. Only "exchange limit" supported through this API
-options	array	Optional. An optional array containing at most one supported order
-execution option. See Order execution options for details.
-   *)
-    type response = Status.response [@@deriving yojson, sexp]
-  end
-
-  module Cancel = struct
-    let operation = "cancel"
-
-    let sub_operation =
-      sprintf "%s/%s" operation
-
-
-    type request = {order_id:string} [@@deriving sexp, yojson]
-
-    type response = Status.response [@@deriving sexp, yojson]
-
-    module All = struct
-      let operation =
-        sub_operation "all"
-      type request = unit [@@deriving sexp, yojson]
-      type response = {result:bool} [@@deriving sexp, yojson]
-    end
-
-    module Session = struct
-      let operation =
-        sub_operation "session"
-      type request = unit [@@deriving sexp, yojson]
-      type response = {result:bool} [@@deriving sexp, yojson]
-    end
-  end
-end
-
-
-module Entity = struct
-
-  module type S = sig
-    val name : string
-  end
-end
 
 module Operation = struct
 
   module type S = sig
-    module Entity : Entity.S
+    val entity : string
     val name : string
     type request [@@deriving sexp]
     type response [@@deriving sexp]
-    val yojson_of_request : request -> Yojson.Safe.json
+    val request_to_yojson : request -> Yojson.Safe.json
     val response_of_yojson : Yojson.Safe.json ->
       (response, string) Result.t
 
@@ -391,92 +289,189 @@ module Request = struct
   let make ~request ~noonce payload =
     Pipe.read noonce >>= function
     | `Ok noonce -> return
-        {request;noonce;payload}
+                      {request;noonce;payload}
     | `Eof -> assert false
 
   let to_yojson {request;noonce;payload} : Yojson.Safe.json =
     match request_noonce_to_yojson {request;noonce} with
-   | `Assoc assoc ->
-     (match payload with
-     | `Null -> `Assoc assoc
-     | `Assoc assoc' ->
-       `Assoc (assoc @ assoc')
-     | #Yojson.Safe.json as unsupported_yojson ->
-     failwithf "expected json association for request payload but got %S"
-       (Yojson.Safe.to_string unsupported_yojson) ()
-     )
-   | #Yojson.Safe.json as unsupported_yojson ->
-     failwithf "expected json association for type request_noonce but got %S"
-       (Yojson.Safe.to_string unsupported_yojson) ()
+    | `Assoc assoc ->
+      (match payload with
+       | `Null -> `Assoc assoc
+       | `Assoc assoc' ->
+         `Assoc (assoc @ assoc')
+       | #Yojson.Safe.json as unsupported_yojson ->
+         failwithf "expected json association for request payload but got %S"
+           (Yojson.Safe.to_string unsupported_yojson) ()
+      )
+    | #Yojson.Safe.json as unsupported_yojson ->
+      failwithf "expected json association for type request_noonce but got %S"
+        (Yojson.Safe.to_string unsupported_yojson) ()
 
 end
 
-let post
-    (type request)
-    (type response)
-    (module Cfg : Cfg.S)
-    (module Operation : Operation.S with
-      type request = request and type response = response)
-    (noonce : Noonce.reader)
-    (request : request) =
-  let payload =
-    Operation.yojson_of_request request in
-  Request.make ~noonce ~request:Operation.name payload >>=
-  fun request ->
-  (Request.to_yojson request |>
-  Yojson.Safe.to_string |>
-  Auth.of_payload |> return)
-  >>= fun payload ->
-  let headers =
-    Cohttp.Header.of_list
-      ["Content-Type", "text/plain";
-       "X-GEMINI-PAYLOAD", Auth.to_string payload;
-       "X-GEMINI-APIKEY", Cfg.api_key;
-       "X-GEMINI-SIGNATURE",
+module Service(Operation:Operation.S) = struct
+  let post
+      (module Cfg : Cfg.S)
+      (noonce : Noonce.reader)
+      (request : Operation.request) =
+    let payload =
+      Operation.request_to_yojson request in
+    Request.make ~noonce ~request:Operation.name payload >>=
+    fun request ->
+    (Request.to_yojson request |>
+     Yojson.Safe.to_string |>
+     Auth.of_payload |> return
+    )
+    >>= fun payload ->
+    let headers =
+      Cohttp.Header.of_list
+        ["Content-Type", "text/plain";
+         "X-GEMINI-PAYLOAD", Auth.to_string payload;
+         "X-GEMINI-APIKEY", Cfg.api_key;
+         "X-GEMINI-SIGNATURE",
          Auth.(
            hmac_sha384 ~api_secret:Cfg.api_secret payload |>
            to_string
          )
-      ]
-  in
-  let uri = Uri.make
-      ~scheme:"https"
-      ~host:Cfg.api_host
-      ~path:
-        (path_with_version ~version:Cfg.version
-           ~entity:Operation.Entity.name
-           ~operation:Operation.name
+        ]
+    in
+    let uri = Uri.make
+        ~scheme:"https"
+        ~host:Cfg.api_host
+        ~path:
+          (path_with_version ~version:Cfg.version
+             ~entity:Operation.entity
+             ~operation:Operation.name
+          )
+        ?query:None
+        () in
+    Cohttp_async.Client.post
+      ~headers
+      ?chunked:None
+      ?interrupt:None
+      ?ssl_config:None
+      ?body:None
+      uri >>= fun (response, body) ->
+    match Cohttp.Response.status response with
+    | `OK ->
+      (
+        Cohttp_async.Body.to_string body
+        >>|
+        (fun s ->
+           let yojson = Yojson.Safe.from_string s in
+           let response = Operation.response_of_yojson yojson in
+           match response with
+           | Result.Ok ok -> `Ok ok
+           | Result.Error e -> `Json_parse_error e
         )
-      ?query:None
-      () in
-  Cohttp_async.Client.post
-    ~headers
-    ?chunked:None
-    ?interrupt:None
-    ?ssl_config:None
-    ?body:None
-    uri >>= fun (response, body) ->
-  match Cohttp.Response.status response with
-  | `OK ->
-    (
-      Cohttp_async.Body.to_string body
-      >>|
-      (fun s ->
-          let yojson = Yojson.Safe.from_string s in
-          let response = Operation.response_of_yojson yojson in
-          match response with
-          | Result.Ok ok -> `Ok ok
-          | Result.Error e -> `Json_parse_error e
       )
-    )
-  | `Not_found
-  | `Bad_request
-  | `Unauthorized as error -> return error
-  | (code : Cohttp.Code.status_code) ->
-    failwiths "unexpected status code"
-      code Cohttp.Code.sexp_of_status_code
+    | `Not_found
+    | `Bad_request
+    | `Unauthorized as error -> return error
+    | (code : Cohttp.Code.status_code) ->
+      failwiths "unexpected status code"
+        code Cohttp.Code.sexp_of_status_code
+end
 
+module Order =
+struct
+  let entity = "order"
 
+  module Status =
+  struct
+    module T = struct
+      let entity = entity
+      let name = "status"
 
+      type request = {
+        order_id:string;
+      } [@@deriving yojson, sexp]
+
+      type response = {
+        order_id : string;
+        id : string;
+        symbol : Symbol.t; (*I"btcusd",*)
+        exchange : Exchange.t ;(*gemini*)
+        avg_execution_price : decimal;
+        side : Side.t;
+        type_ : Order_type.t;
+        timestamp : string;
+        timestampms : int;
+        is_live : bool;
+        is_cancelled : bool;
+        is_hidden : bool;
+        was_forced : bool;
+        executed_amount : int;
+        remaining_amount: int;
+        options: Order_execution_option.t list;
+        price : decimal;
+        original_amount : decimal;
+      } [@@deriving yojson, sexp]
+    end
+    include T
+    include Service(T)
+  end
+
+  module New = struct
+    module T = struct
+      let entity = entity
+      let name = "new"
+
+      type request = {
+        client_order_id:string;
+        symbol:string;
+        amount:string;
+        price:decimal; (* zarith *)
+        side:Side.t;
+        type_:Order_type.t [@name "type"];
+        options: Order_execution_option.t
+      } [@@deriving sexp, yojson]
+
+      type response = Status.response [@@deriving yojson, sexp]
+    end
+    include T
+    include Service(T)
+  end
+
+  module Cancel = struct
+    module T = struct
+      let entity = entity
+      let name = "cancel"
+
+      let sub_operation =
+        sprintf "%s/%s" name
+
+      type request = {order_id:string} [@@deriving sexp, yojson]
+
+      type response = Status.response [@@deriving sexp, yojson]
+    end
+    include T
+    include Service(T)
+
+    module All = struct
+      module T = struct
+        let entity = entity
+        let name =
+          sub_operation "all"
+        type request = unit [@@deriving sexp, yojson]
+        type response = {result:bool} [@@deriving sexp, yojson]
+      end
+      include T
+      include Service(T)
+    end
+
+    module Session = struct
+      module T = struct
+        let entity = entity
+        let name =
+          sub_operation "session"
+        type request = unit [@@deriving sexp, yojson]
+        type response = {result:bool} [@@deriving sexp, yojson]
+      end
+      include T
+      include Service(T)
+    end
+  end
+end
 
 

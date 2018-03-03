@@ -4,3 +4,6 @@ build:
 
 default:
 	build
+
+clean :
+	jbuilder clean
