@@ -56,12 +56,12 @@ module Cfg = struct
     end in
   (module M : S)
 
-  module Sandbox =
+  module Sandbox () =
     struct
       include (val make "sandbox" : S)
     end
 
-  module Production =
+  module Production () =
     struct
       include (val make "production" : S)
     end
