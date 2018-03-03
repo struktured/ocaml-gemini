@@ -34,6 +34,7 @@ PKG ctypes.stubs
 PKG easy-format
 PKG fieldslib
 PKG fmt
+PKG hex
 PKG integers
 PKG ipaddr
 PKG ipaddr.unix

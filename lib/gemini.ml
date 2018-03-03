@@ -5,20 +5,47 @@ type decimal = string [@@deriving yojson, sexp]
 
 module Auth = struct
 
- let base64 s = Cstruct.of_string s |> Nocrypto.Base64.encode
+  type t = [`Base64 of Cstruct.t | Hex.t]
 
- let hmac_sha384_base64 ~api_secret payload =
+  let of_payload s : [< t > `Base64] = `Base64
+      (Cstruct.of_string s |> Nocrypto.Base64.encode)
+
+  let hmac_sha384 ~api_secret (`Base64 payload) : [< t > `Hex] =
     let key = Cstruct.of_string api_secret in
-    Nocrypto.Hash.SHA384.hmac ~key payload |>
-    Nocrypto.Base64.encode |>
-    Cstruct.to_string
+    Nocrypto.Hash.SHA384.hmac ~key payload
+    |> Hex.of_cstruct
+
+  let to_string : [<t] -> string = function
+    | `Base64 cstruct -> Cstruct.to_string cstruct
+    | `Hex hex -> hex
+end
+
+module Noonce = struct
+
+  module type S = sig
+    type t [@@deriving sexp, yojson]
+
+    val pipe : init:t -> unit -> string Pipe.Reader.t
+  end
+
+  module Int : S with type t = int = struct
+    type t = int [@@deriving sexp, yojson]
+    let pipe ~init () =
+      Pipe.unfold ~init
+        ~f:
+          (fun s ->
+             let s' = s + 1 in
+             Some (Int.to_string s', s') |> return
+          )
+  end
 
 end
 
 module Cfg = struct
 
   let param ?default ~name ~env () =
-    let name = sprintf "GEMINI_%s_%s" (String.uppercase env) name in
+    let name = sprintf "GEMINI_%s_%s"
+        (String.uppercase env) name in
     match Unix.getenv name with
     | Some param -> param
     | None ->
@@ -368,16 +395,17 @@ let post
     (request:request) =
   let payload =
     Operation.yojson_of_request request |>
-    Yojson.Safe.to_string |>
-    Auth.base64 in
+    Yojson.Safe.to_string |> fun s ->
+    Auth.of_payload s in
   let headers =
     Cohttp.Header.of_list
-      ["X-GEMINI-PAYLOAD", Cstruct.to_string payload;
+      ["X-GEMINI-PAYLOAD", Auth.to_string payload;
        "X-GEMINI-APIKEY", Cfg.api_key;
        "X-GEMINI-SIGNATURE",
-         Auth.hmac_sha384_base64
-            ~api_secret:Cfg.api_secret
-            payload
+         Auth.(
+           hmac_sha384 ~api_secret:Cfg.api_secret payload |>
+           to_string
+         )
       ]
   in
   let uri = Uri.make
@@ -402,7 +430,7 @@ let post
     (
       Cohttp_async.Body.to_string body
       >>|
-      ( fun s ->
+      (fun s ->
           let yojson = Yojson.Safe.from_string s in
           let response = Operation.response_of_yojson yojson in
           match response with
