@@ -5,7 +5,7 @@ let () =
 
 #use "topfind";;
 #thread;;
-#require "core async cohttp.async nocrypto ppx_deriving.runtime ppx_deriving_yojson.runtime ppx_inline_test.runtime-lib ppx_jane uri yojson";;
+#require "core hex async cohttp.async nocrypto ppx_deriving.runtime ppx_deriving_yojson.runtime ppx_inline_test.runtime-lib ppx_jane uri yojson";;
 
 #load "compiler-libs/ocamlcommon.cma";;
 

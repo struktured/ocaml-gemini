@@ -21,6 +21,7 @@ module Auth = struct
 end
 
 module Noonce = struct
+  type reader = string Pipe.Reader.t
 
   module type S = sig
     type t [@@deriving sexp, yojson]
@@ -88,7 +89,7 @@ module Cfg = struct
   module Production () =
     struct
       include (val make "production" : S)
-    end
+     end
 
 end
 
@@ -276,8 +277,6 @@ struct
     let operation = "status"
 
     type request = {
-      request:string;
-      nonce:int;
       order_id:string;
     } [@@deriving yojson, sexp]
 
@@ -307,8 +306,6 @@ struct
     let operation = "new"
 
     type request = {
-      request:string;
-      nonce:int;
       client_order_id:string;
       symbol:string;
       amount:string;
@@ -340,24 +337,21 @@ execution option. See Order execution options for details.
       sprintf "%s/%s" operation
 
 
-    type request = {request:string;noonce:string;
-                    order_id:string} [@@deriving sexp, yojson]
+    type request = {order_id:string} [@@deriving sexp, yojson]
 
     type response = Status.response [@@deriving sexp, yojson]
 
     module All = struct
       let operation =
         sub_operation "all"
-      type request =
-        {request:string;noonce:string} [@@deriving sexp, yojson]
+      type request = unit [@@deriving sexp, yojson]
       type response = {result:bool} [@@deriving sexp, yojson]
     end
 
     module Session = struct
       let operation =
         sub_operation "session"
-      type request =
-        {request:string;noonce:string} [@@deriving sexp, yojson]
+      type request = unit [@@deriving sexp, yojson]
       type response = {result:bool} [@@deriving sexp, yojson]
     end
   end
@@ -386,17 +380,53 @@ module Operation = struct
 
 end
 
+module Request = struct
+
+  type request_noonce =
+    {request:string; noonce:string} [@@deriving sexp, yojson]
+
+  type t =
+    {request:string; noonce:string; payload:Yojson.Safe.json}
+
+  let make ~request ~noonce payload =
+    Pipe.read noonce >>= function
+    | `Ok noonce -> return
+        {request;noonce;payload}
+    | `Eof -> assert false
+
+  let to_yojson {request;noonce;payload} : Yojson.Safe.json =
+    match request_noonce_to_yojson {request;noonce} with
+   | `Assoc assoc ->
+     (match payload with
+     | `Null -> `Assoc assoc
+     | `Assoc assoc' ->
+       `Assoc (assoc @ assoc')
+     | #Yojson.Safe.json as unsupported_yojson ->
+     failwithf "expected json association for request payload but got %S"
+       (Yojson.Safe.to_string unsupported_yojson) ()
+     )
+   | #Yojson.Safe.json as unsupported_yojson ->
+     failwithf "expected json association for type request_noonce but got %S"
+       (Yojson.Safe.to_string unsupported_yojson) ()
+
+end
+
 let post
     (type request)
     (type response)
     (module Cfg : Cfg.S)
     (module Operation : Operation.S with
       type request = request and type response = response)
-    (request:request) =
+    (noonce : Noonce.reader)
+    (request : request) =
   let payload =
-    Operation.yojson_of_request request |>
-    Yojson.Safe.to_string |> fun s ->
-    Auth.of_payload s in
+    Operation.yojson_of_request request in
+  Request.make ~noonce ~request:Operation.name payload >>=
+  fun request ->
+  (Request.to_yojson request |>
+  Yojson.Safe.to_string |>
+  Auth.of_payload |> return)
+  >>= fun payload ->
   let headers =
     Cohttp.Header.of_list
       ["X-GEMINI-PAYLOAD", Auth.to_string payload;
