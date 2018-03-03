@@ -5,11 +5,11 @@ let () =
 
 #use "topfind";;
 #thread;;
-#require "async base64 cohttp.async cryptokit ezjsonm ezxmlm ocaml-protoc ocaml-protoc-yojson ocamlgraph pgocaml ppx_deriving.runtime ppx_deriving_yojson.runtime ppx_inline_test.runtime-lib ppx_jane re.perl safepass uri yojson compiler-libs.common hdf5_raw alcotest zip yaml pcre";;
+#require "core async cohttp.async nocrypto ppx_deriving.runtime ppx_deriving_yojson.runtime ppx_inline_test.runtime-lib ppx_jane uri yojson";;
 
 #load "compiler-libs/ocamlcommon.cma";;
 
-#directory "_build/install/default/lib/";;
+#directory "_build/install/default/lib/gemini";;
 #load "gemini.cma";;
 
 open Core;;

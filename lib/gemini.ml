@@ -8,16 +8,20 @@ let production_host = "api.gemini.com"
 
 module Auth = struct
 
-  let to_hex _ = failwith "use cryptokit"
+ let base64 s = Cstruct.of_string s |> Nocrypto.Base64.encode
 
-  let hmac_sha384 ~api_secret _payload
-    = failwith "use cryptokit"
+ let hmac_sha384_base64 ~api_secret payload =
+    let key = Cstruct.of_string api_secret in
+    Nocrypto.Hash.SHA384.hmac ~key payload |>
+    Nocrypto.Base64.encode |>
+    Cstruct.to_string
 
 end
+
 module Cfg = struct
 
   let param ?default ~name ~env () =
-    let name = sprintf "GEMINI_%s_%s" env name in
+    let name = sprintf "GEMINI_%s_%s" (String.uppercase env) name in
     match Unix.getenv name with
     | Some param -> param
     | None ->
@@ -28,7 +32,7 @@ module Cfg = struct
       | Some default -> default
 
   let host ~env =
-    sprintf "api.%s.gemini.com" env
+    sprintf "api.%s.gemini.com" (String.lowercase env)
   let version_1 = "v1"
 
   module type S = sig
@@ -63,7 +67,6 @@ module Cfg = struct
     end
 
 end
-let method_ = `Post
 
 let path_with_version
     ~version
@@ -369,17 +372,15 @@ let post
   let payload =
     Operation.yojson_of_request request |>
     Yojson.Safe.to_string |>
-    B64.encode ~pad:true ?alphabet:None in
+    Auth.base64 in
   let headers =
     Cohttp.Header.of_list
-      ["X-GEMINI-PAYLOAD", payload;
+      ["X-GEMINI-PAYLOAD", Cstruct.to_string payload;
        "X-GEMINI-APIKEY", Cfg.api_key;
        "X-GEMINI-SIGNATURE",
-       Auth.to_hex
-         (Auth.hmac_sha384
+         Auth.hmac_sha384_base64
             ~api_secret:Cfg.api_secret
             payload
-         )
       ]
   in
   let uri = Uri.make

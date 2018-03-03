@@ -26,6 +26,7 @@ PKG conduit-async
 PKG core
 PKG core_kernel
 PKG core_kernel.base_for_tests
+PKG cstruct
 PKG ctypes
 PKG ctypes.foreign.base
 PKG ctypes.foreign.threaded
@@ -41,6 +42,7 @@ PKG jbuilder
 PKG logs
 PKG logs.fmt
 PKG magic-mime
+PKG nocrypto
 PKG ppx_assert.runtime-lib
 PKG ppx_bench.runtime-lib
 PKG ppx_compare.runtime-lib
