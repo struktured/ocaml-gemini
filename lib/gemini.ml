@@ -24,7 +24,7 @@ module Noonce = struct
   type reader = string Pipe.Reader.t
 
   module type S = sig
-    type t [@@deriving sexp, yojson]
+    type t [@@deriving sexp]
 
     val pipe : init:t -> unit -> string Pipe.Reader.t
   end
