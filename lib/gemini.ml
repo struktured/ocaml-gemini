@@ -428,8 +428,8 @@ struct
       type response = {
         order_id : string;
         id : string;
-        symbol : Symbol.t; (*I"btcusd",*)
-        exchange : Exchange.t ;(*gemini*)
+        symbol : Symbol.t;
+        exchange : Exchange.t;
         avg_execution_price : decimal;
         side : Side.t;
         type_ : Order_type.t;
@@ -501,6 +501,18 @@ struct
       include T
       include Service(T)
     end
+
+    let command : string * Command.t =
+    (List.last_exn path,
+     Command.group
+       ~summary:"Gemini Order Cancel Commands"
+       [command;
+        Session.command;
+        All.command
+       ]
+    )
+
+
   end
 
   let command : string * Command.t =
