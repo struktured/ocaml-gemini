@@ -114,12 +114,147 @@ module Cfg = struct
     )
 
 end
+module Operation = struct
 
-let path_with_version
-    ~version
-    path =
-  String.concat ~sep:"/"
-    (version::path)
+  module type S = sig
+    val path : string list
+    type request [@@deriving sexp]
+    type response [@@deriving sexp]
+    val request_to_yojson : request -> Yojson.Safe.json
+    val response_of_yojson : Yojson.Safe.json ->
+      (response, string) Result.t
+
+  end
+
+end
+
+module Request = struct
+
+  type request_noonce =
+    {request:string; noonce:string} [@@deriving sexp, yojson]
+
+  type t =
+    {request:string; noonce:string; payload:Yojson.Safe.json}
+
+  let make ~request ~noonce payload =
+    Pipe.read noonce >>= function
+    | `Ok noonce -> return
+                      {request;noonce;payload}
+    | `Eof -> assert false
+
+  let to_yojson {request;noonce;payload} : Yojson.Safe.json =
+    match request_noonce_to_yojson {request;noonce} with
+    | `Assoc assoc ->
+      (match payload with
+       | `Null -> `Assoc assoc
+       | `Assoc assoc' ->
+         `Assoc (assoc @ assoc')
+       | #Yojson.Safe.json as unsupported_yojson ->
+         failwithf "expected json association for request payload but got %S"
+           (Yojson.Safe.to_string unsupported_yojson) ()
+      )
+    | #Yojson.Safe.json as unsupported_yojson ->
+      failwithf "expected json association for type request_noonce but got %S"
+        (Yojson.Safe.to_string unsupported_yojson) ()
+
+end
+
+module Service(Operation:Operation.S) = struct
+  let post
+      (module Cfg : Cfg.S)
+      (noonce : Noonce.reader)
+      (request : Operation.request) =
+    let payload =
+      Operation.request_to_yojson request in
+    let path = String.concat ~sep:"/"
+        Operation.path in
+     Request.make ~noonce
+      ~request:path payload >>=
+    fun request ->
+    (Request.to_yojson request |>
+     Yojson.Safe.to_string |>
+     Auth.of_payload |> return
+    )
+    >>= fun payload ->
+    let headers =
+      Cohttp.Header.of_list
+        ["Content-Type", "text/plain";
+         "X-GEMINI-PAYLOAD", Auth.to_string payload;
+         "X-GEMINI-APIKEY", Cfg.api_key;
+         "X-GEMINI-SIGNATURE",
+         Auth.(
+           hmac_sha384 ~api_secret:Cfg.api_secret payload |>
+           to_string
+         )
+        ]
+    in
+    let uri = Uri.make
+        ~scheme:"https"
+        ~host:Cfg.api_host
+        ~path
+        ?query:None
+        () in
+    Cohttp_async.Client.post
+      ~headers
+      ?chunked:None
+      ?interrupt:None
+      ?ssl_config:None
+      ?body:None
+      uri >>= fun (response, body) ->
+    match Cohttp.Response.status response with
+    | `OK ->
+      (
+        Cohttp_async.Body.to_string body
+        >>|
+        (fun s ->
+           let yojson = Yojson.Safe.from_string s in
+           let response = Operation.response_of_yojson yojson in
+           match response with
+           | Result.Ok ok -> `Ok ok
+           | Result.Error e -> `Json_parse_error e
+        )
+      )
+    | `Not_found
+    | `Bad_request
+    | `Unauthorized as error -> return error
+    | (code : Cohttp.Code.status_code) ->
+      failwiths "unexpected status code"
+        code Cohttp.Code.sexp_of_status_code
+
+  let command =
+    let open Command.Let_syntax in
+    (List.last_exn Operation.path,
+     Command.async
+       ~summary:"OCaml Gemini Command Interface"
+       [%map_open
+         let config = Cfg.param
+         and request = anon ("request" %: sexp)
+         in
+         fun () ->
+           let request = Operation.request_of_sexp request in
+           post config (Noonce.Int.pipe ~init:0 ()) request >>= function
+           | `Ok response -> failwith "nyi"
+           | `Json_parse_error msg -> failwith msg
+           | `Unauthorized
+           | `Not_found
+           | `Bad_request -> failwith "nyi"
+       ]
+    )
+
+end
+
+module V1 = struct
+let path = ["v1"]
+
+module Heartbeat = struct
+  module T = struct
+    let path = path@["heartbeat"]
+    type request = unit [@@deriving sexp, yojson]
+    type response = {result:bool} [@@deriving sexp, yojson]
+  end
+  include T
+  include Service(T)
+end
 
 module Symbol = struct
   type t = [`Btc_usd | `Eth_usd | `Eth_btc] [@@deriving sexp]
@@ -282,139 +417,10 @@ module Order_execution_option = struct
 end
 
 
-module Operation = struct
-
-  module type S = sig
-    val path : string list
-    type request [@@deriving sexp]
-    type response [@@deriving sexp]
-    val request_to_yojson : request -> Yojson.Safe.json
-    val response_of_yojson : Yojson.Safe.json ->
-      (response, string) Result.t
-
-  end
-
-end
-
-module Request = struct
-
-  type request_noonce =
-    {request:string; noonce:string} [@@deriving sexp, yojson]
-
-  type t =
-    {request:string; noonce:string; payload:Yojson.Safe.json}
-
-  let make ~request ~noonce payload =
-    Pipe.read noonce >>= function
-    | `Ok noonce -> return
-                      {request;noonce;payload}
-    | `Eof -> assert false
-
-  let to_yojson {request;noonce;payload} : Yojson.Safe.json =
-    match request_noonce_to_yojson {request;noonce} with
-    | `Assoc assoc ->
-      (match payload with
-       | `Null -> `Assoc assoc
-       | `Assoc assoc' ->
-         `Assoc (assoc @ assoc')
-       | #Yojson.Safe.json as unsupported_yojson ->
-         failwithf "expected json association for request payload but got %S"
-           (Yojson.Safe.to_string unsupported_yojson) ()
-      )
-    | #Yojson.Safe.json as unsupported_yojson ->
-      failwithf "expected json association for type request_noonce but got %S"
-        (Yojson.Safe.to_string unsupported_yojson) ()
-
-end
-
-module Service(Operation:Operation.S) = struct
-  let post
-      (module Cfg : Cfg.S)
-      (noonce : Noonce.reader)
-      (request : Operation.request) =
-    let payload =
-      Operation.request_to_yojson request in
-    Request.make ~noonce
-      ~request:(path_with_version Cfg.version Operation.path) payload >>=
-    fun request ->
-    (Request.to_yojson request |>
-     Yojson.Safe.to_string |>
-     Auth.of_payload |> return
-    )
-    >>= fun payload ->
-    let headers =
-      Cohttp.Header.of_list
-        ["Content-Type", "text/plain";
-         "X-GEMINI-PAYLOAD", Auth.to_string payload;
-         "X-GEMINI-APIKEY", Cfg.api_key;
-         "X-GEMINI-SIGNATURE",
-         Auth.(
-           hmac_sha384 ~api_secret:Cfg.api_secret payload |>
-           to_string
-         )
-        ]
-    in
-    let uri = Uri.make
-        ~scheme:"https"
-        ~host:Cfg.api_host
-        ~path:
-          (path_with_version ~version:Cfg.version
-             Operation.path
-          )
-        ?query:None
-        () in
-    Cohttp_async.Client.post
-      ~headers
-      ?chunked:None
-      ?interrupt:None
-      ?ssl_config:None
-      ?body:None
-      uri >>= fun (response, body) ->
-    match Cohttp.Response.status response with
-    | `OK ->
-      (
-        Cohttp_async.Body.to_string body
-        >>|
-        (fun s ->
-           let yojson = Yojson.Safe.from_string s in
-           let response = Operation.response_of_yojson yojson in
-           match response with
-           | Result.Ok ok -> `Ok ok
-           | Result.Error e -> `Json_parse_error e
-        )
-      )
-    | `Not_found
-    | `Bad_request
-    | `Unauthorized as error -> return error
-    | (code : Cohttp.Code.status_code) ->
-      failwiths "unexpected status code"
-        code Cohttp.Code.sexp_of_status_code
-
-  let command =
-    let open Command.Let_syntax in
-    (List.last_exn Operation.path,
-     Command.async
-       ~summary:"OCaml Gemini Command Interface"
-       [%map_open
-         let config = Cfg.param
-         and request = anon ("request" %: sexp)
-         in
-         fun () ->
-           let request = Operation.request_of_sexp request in
-           post config (Noonce.Int.pipe ~init:0 ()) request >>= function
-           | `Ok response -> failwith "nyi"
-           | `Json_parse_error msg -> failwith msg
-           | `Unauthorized
-           | `Not_found
-           | `Bad_request -> failwith "nyi"
-       ]
-    )
-
-end
 
 module Order =
 struct
-  let path = ["order"]
+  let path = path@["order"]
 
   module Status =
   struct
@@ -526,15 +532,29 @@ struct
     )
 
 end
+module Orders = struct
 
+  module T = struct
+  let path = path@["orders"]
+
+  type request = unit [@@deriving sexp, yojson]
+  type response =
+    Order.Status.response list [@@deriving yojson, sexp]
+  end
+  include T
+  include Service(T)
+end
+end
 
 module Operations = struct
-
+  open V1
   let all = [(module Order.New : Operation.S);
              (module Order.Cancel);
              (module Order.Cancel.All);
              (module Order.Cancel.Session);
-             (module Order.Status)
+             (module Order.Status);
+             (module Orders);
+             (module Heartbeat)
             ]
 
   let to_path_string (module Operation:Operation.S) =
