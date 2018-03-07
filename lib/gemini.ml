@@ -91,16 +91,35 @@ module Cfg = struct
     include (val make "production" : S)
   end
 
+  let arg_type = Command.Arg_type.create
+    (fun s -> match String.lowercase s with
+
+      | "production" ->
+        let module Cfg : S = Production () in
+        (module Cfg : S)
+      | "sandbox" ->
+        let module Cfg : S = Sandbox () in
+        (module Cfg : S)
+      | unsupported_env ->
+        failwithf "environment %s not supported"
+          unsupported_env ()
+    )
+  let param =
+    Command.Param.(
+      flag "-cfg" (required arg_type)
+        ~doc:(
+          sprintf "STRING the configuration the client will connect with\
+                 (eg. sandbox or production)."
+        )
+    )
+
 end
 
 let path_with_version
     ~version
-    ~entity
-    ~operation =
-  sprintf "%s/%s/%s"
-    version
-    entity
-    operation
+    path =
+  String.concat ~sep:"/"
+    (version::path)
 
 module Symbol = struct
   type t = [`Btc_usd | `Eth_usd | `Eth_btc] [@@deriving sexp]
@@ -266,8 +285,7 @@ end
 module Operation = struct
 
   module type S = sig
-    val entity : string
-    val name : string
+    val path : string list
     type request [@@deriving sexp]
     type response [@@deriving sexp]
     val request_to_yojson : request -> Yojson.Safe.json
@@ -316,7 +334,8 @@ module Service(Operation:Operation.S) = struct
       (request : Operation.request) =
     let payload =
       Operation.request_to_yojson request in
-    Request.make ~noonce ~request:Operation.name payload >>=
+    Request.make ~noonce
+      ~request:(path_with_version Cfg.version Operation.path) payload >>=
     fun request ->
     (Request.to_yojson request |>
      Yojson.Safe.to_string |>
@@ -340,8 +359,7 @@ module Service(Operation:Operation.S) = struct
         ~host:Cfg.api_host
         ~path:
           (path_with_version ~version:Cfg.version
-             ~entity:Operation.entity
-             ~operation:Operation.name
+             Operation.path
           )
         ?query:None
         () in
@@ -371,17 +389,37 @@ module Service(Operation:Operation.S) = struct
     | (code : Cohttp.Code.status_code) ->
       failwiths "unexpected status code"
         code Cohttp.Code.sexp_of_status_code
+
+  let command =
+    let open Command.Let_syntax in
+    (List.last_exn Operation.path,
+     Command.async
+       ~summary:"OCaml Gemini Command Interface"
+       [%map_open
+         let config = Cfg.param
+         and request = anon ("request" %: sexp)
+         in
+         fun () ->
+           let request = Operation.request_of_sexp request in
+           post config (Noonce.Int.pipe ~init:0 ()) request >>= function
+           | `Ok response -> failwith "nyi"
+           | `Json_parse_error msg -> failwith msg
+           | `Unauthorized
+           | `Not_found
+           | `Bad_request -> failwith "nyi"
+       ]
+    )
+
 end
 
 module Order =
 struct
-  let entity = "order"
+  let path = ["order"]
 
   module Status =
   struct
     module T = struct
-      let entity = entity
-      let name = "status"
+      let path = path@["status"]
 
       type request = {
         order_id:string;
@@ -414,8 +452,7 @@ struct
 
   module New = struct
     module T = struct
-      let entity = entity
-      let name = "new"
+      let path = path@["new"]
 
       type request = {
         client_order_id:string;
@@ -431,15 +468,12 @@ struct
     end
     include T
     include Service(T)
+
   end
 
   module Cancel = struct
     module T = struct
-      let entity = entity
-      let name = "cancel"
-
-      let sub_operation =
-        sprintf "%s/%s" name
+      let path = path@["cancel"]
 
       type request = {order_id:string} [@@deriving sexp, yojson]
 
@@ -450,9 +484,7 @@ struct
 
     module All = struct
       module T = struct
-        let entity = entity
-        let name =
-          sub_operation "all"
+        let path = path@["all"]
         type request = unit [@@deriving sexp, yojson]
         type response = {result:bool} [@@deriving sexp, yojson]
       end
@@ -462,9 +494,7 @@ struct
 
     module Session = struct
       module T = struct
-        let entity = entity
-        let name =
-          sub_operation "session"
+        let path = path@["session"]
         type request = unit [@@deriving sexp, yojson]
         type response = {result:bool} [@@deriving sexp, yojson]
       end
@@ -472,6 +502,41 @@ struct
       include Service(T)
     end
   end
+
+  let command : string * Command.t =
+    (List.last_exn path,
+     Command.group
+       ~summary:"Gemini Order Commands"
+       [New.command;
+        Cancel.command;
+        Status.command
+       ]
+    )
+
 end
 
+
+module Operations = struct
+
+  let all = [(module Order.New : Operation.S);
+             (module Order.Cancel);
+             (module Order.Cancel.All);
+             (module Order.Cancel.Session);
+             (module Order.Status)
+            ]
+
+  let to_path_string (module Operation:Operation.S) =
+    String.concat Operation.path ~sep:"/"
+
+  let of_path path =
+    let target = String.concat ~sep:"/" path in
+    List.find_map all ~f:
+      (fun (module Op:Operation.S) ->
+        match String.equal
+                (to_path_string (module Op:Operation.S)) target with
+        | false -> None
+        | true -> Some (module Op:Operation.S)
+      )
+
+end
 
