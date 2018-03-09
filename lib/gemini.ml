@@ -159,11 +159,21 @@ module Request = struct
 
 end
 
-module Service(Operation:Operation.S) = struct
+module Error = struct
+  type http = [`Bad_request | `Not_found | `Unauthorized] [@@deriving sexp]
+  type json = [`Json_parse_error of string] [@@deriving sexp]
+
+  type post = [http|json] [@@deriving sexp]
+end
+
+module Service(Operation:Operation.S) =
+struct
   let post
       (module Cfg : Cfg.S)
       (noonce : Noonce.reader)
-      (request : Operation.request) =
+      (request : Operation.request) :
+    [ `Ok of Operation.response
+    | Error.post] Deferred.t =
     let payload =
       Operation.request_to_yojson request in
     let path = String.concat ~sep:"/"
@@ -234,10 +244,14 @@ module Service(Operation:Operation.S) = struct
            let request = Operation.request_of_sexp request in
            post config (Noonce.Int.pipe ~init:0 ()) request >>= function
            | `Ok response -> failwith "nyi"
-           | `Json_parse_error msg -> failwith msg
-           | `Unauthorized
-           | `Not_found
-           | `Bad_request -> failwith "nyi"
+           | #Error.post as post_error ->
+             failwiths
+               (sprintf
+                  "post for operation %S failed"
+                  (String.concat ~sep:"/" Operation.path)
+               )
+               post_error
+               Error.sexp_of_post
        ]
     )
 
