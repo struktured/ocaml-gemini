@@ -2,7 +2,7 @@
 build:
 	jbuilder build
 
-install:
+install: build
 	jbuilder install
 
 

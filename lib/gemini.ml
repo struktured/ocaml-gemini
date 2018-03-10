@@ -20,6 +20,9 @@ module Auth = struct
     | `Hex hex -> hex
 end
 
+let path_to_string path = sprintf "/%s"
+    (String.concat ~sep:"/" path)
+
 module Noonce = struct
   type reader = string Pipe.Reader.t
 
@@ -177,8 +180,7 @@ struct
     | Error.post] Deferred.t =
     let payload =
       Operation.request_to_yojson request in
-    let path = String.concat ~sep:"/"
-        Operation.path in
+    let path = path_to_string Operation.path in
      Request.make ~noonce
       ~request:path payload >>=
     fun request ->
@@ -190,6 +192,7 @@ struct
     let headers =
       Cohttp.Header.of_list
         ["Content-Type", "text/plain";
+         "Content-Length", "0";
          "X-GEMINI-PAYLOAD", Auth.to_string payload;
          "X-GEMINI-APIKEY", Cfg.api_key;
          "X-GEMINI-SIGNATURE",
@@ -260,7 +263,7 @@ struct
              failwiths
                (sprintf
                   "post for operation %S failed"
-                  (String.concat ~sep:"/" Operation.path)
+                  (path_to_string Operation.path)
                )
                post_error
                Error.sexp_of_post
@@ -593,10 +596,10 @@ module Operations = struct
             ]
 
   let to_path_string (module Operation:Operation.S) =
-    String.concat Operation.path ~sep:"/"
+    path_to_string Operation.path
 
   let of_path path =
-    let target = String.concat ~sep:"/" path in
+    let target = path_to_string path in
     List.find_map all ~f:
       (fun (module Op:Operation.S) ->
         match String.equal
