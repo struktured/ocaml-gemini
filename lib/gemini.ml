@@ -241,9 +241,15 @@ struct
          and request = anon ("request" %: sexp)
          in
          fun () ->
+           Log.Global.info "request: %s"
+             (Sexp.to_string request);
            let request = Operation.request_of_sexp request in
            post config (Noonce.Int.pipe ~init:0 ()) request >>= function
-           | `Ok response -> failwith "nyi"
+           | `Ok response ->
+             Log.Global.info "response: %s"
+               (Sexp.to_string
+                  (Operation.sexp_of_response response)
+               ); Log.Global.flushed ()
            | #Error.post as post_error ->
              failwiths
                (sprintf
