@@ -233,7 +233,8 @@ struct
       Cohttp_async.Body.to_string body >>| fun body ->
       `Unauthorized body
     | (code : Cohttp.Code.status_code) ->
-      failwiths "unexpected status code"
+      Cohttp_async.Body.to_string body >>| fun body ->
+      failwiths (sprintf "unexpected status code (body=%S)" body)
         code Cohttp.Code.sexp_of_status_code
 
   let command =
