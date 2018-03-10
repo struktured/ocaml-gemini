@@ -23,6 +23,15 @@ end
 let path_to_string path = sprintf "/%s"
     (String.concat ~sep:"/" path)
 
+let path_to_summary ~has_subcommands
+    path = sprintf "Gemini %s command%s"
+    (String.concat ~sep:" " path)
+    (match has_subcommands with
+     | true -> "s"
+     | false -> ""
+    )
+
+
 module Noonce = struct
   type reader = string Pipe.Reader.t
 
@@ -111,7 +120,7 @@ module Cfg = struct
     Command.Param.(
       flag "-cfg" (required arg_type)
         ~doc:(
-          sprintf "STRING the configuration the client will connect with\
+          sprintf "STRING the configuration the client will connect with \
                  (eg. sandbox or production)."
         )
     )
@@ -127,7 +136,6 @@ module Operation = struct
     val request_to_yojson : request -> Yojson.Safe.json
     val response_of_yojson : Yojson.Safe.json ->
       (response, string) Result.t
-
   end
 
 end
@@ -164,7 +172,9 @@ module Request = struct
 end
 
 module Error = struct
-  type http = [`Bad_request of string | `Not_found | `Unauthorized of string] [@@deriving sexp]
+  type http = [ `Bad_request of string
+              | `Not_found
+              | `Unauthorized of string] [@@deriving sexp]
   type json = [`Json_parse_error of string] [@@deriving sexp]
 
   type post = [http|json] [@@deriving sexp]
@@ -244,7 +254,7 @@ struct
     let open Command.Let_syntax in
     (List.last_exn Operation.path,
      Command.async
-       ~summary:"OCaml Gemini Command Interface"
+       ~summary:(path_to_summary ~has_subcommands:false Operation.path)
        [%map_open
          let config = Cfg.param
          and request = anon ("request" %: sexp)
@@ -540,7 +550,7 @@ struct
     let command : string * Command.t =
     (List.last_exn path,
      Command.group
-       ~summary:"Gemini Order Cancel Commands"
+       ~summary:(path_to_summary ~has_subcommands:true path)
        [command;
         Session.command;
         All.command
@@ -551,7 +561,7 @@ struct
   let command : string * Command.t =
     (List.last_exn path,
      Command.group
-       ~summary:"Gemini Order Commands"
+       ~summary:(path_to_summary ~has_subcommands:true path)
        [New.command;
         Cancel.command;
         Status.command
