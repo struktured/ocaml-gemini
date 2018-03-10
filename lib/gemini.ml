@@ -161,7 +161,7 @@ module Request = struct
 end
 
 module Error = struct
-  type http = [`Bad_request | `Not_found | `Unauthorized] [@@deriving sexp]
+  type http = [`Bad_request of string | `Not_found | `Unauthorized of string] [@@deriving sexp]
   type json = [`Json_parse_error of string] [@@deriving sexp]
 
   type post = [http|json] [@@deriving sexp]
@@ -225,9 +225,13 @@ struct
            | Result.Error e -> `Json_parse_error e
         )
       )
-    | `Not_found
-    | `Bad_request
-    | `Unauthorized as error -> return error
+    | `Not_found -> return `Not_found
+    | `Bad_request ->
+      Cohttp_async.Body.to_string body >>| fun body ->
+      `Bad_request body
+    | `Unauthorized ->
+      Cohttp_async.Body.to_string body >>| fun body ->
+      `Unauthorized body
     | (code : Cohttp.Code.status_code) ->
       failwiths "unexpected status code"
         code Cohttp.Code.sexp_of_status_code
