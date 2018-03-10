@@ -1,5 +1,5 @@
 B ../_build/default/lib
-FLG -ppx '/home/carm/projects/ocaml-gemini/_build/default/.ppx/ppx_jane+ppx_deriving_yojson/ppx.exe --as-ppx --cookie '\''library-name="gemini"'\'''
+FLG -ppx '/home/cep1/projects/ocaml-gemini/_build/default/.ppx/ppx_jane+ppx_deriving_yojson/ppx.exe --as-ppx --cookie '\''library-name="gemini"'\'''
 FLG -w -40 -w -39 -open Core -open Async
 PKG astring
 PKG async
@@ -77,4 +77,3 @@ PKG uri.services
 PKG variantslib
 PKG yojson
 PKG zarith
-S .

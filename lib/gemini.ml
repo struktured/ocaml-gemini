@@ -114,6 +114,7 @@ module Cfg = struct
     )
 
 end
+
 module Operation = struct
 
   module type S = sig
@@ -537,8 +538,6 @@ struct
         All.command
        ]
     )
-
-
   end
 
   let command : string * Command.t =
@@ -552,6 +551,7 @@ struct
     )
 
 end
+
 module Orders = struct
 
   module T = struct
@@ -564,6 +564,16 @@ module Orders = struct
   include T
   include Service(T)
 end
+
+let command : Command.t =
+  Command.group
+    ~summary:"Gemini Command System"
+    [Heartbeat.command;
+     Order.command;
+     Orders.command;
+    ]
+
+
 end
 
 module Operations = struct
