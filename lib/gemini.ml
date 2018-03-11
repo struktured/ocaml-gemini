@@ -33,12 +33,12 @@ let path_to_summary ~has_subcommands
 
 
 module Noonce = struct
-  type reader = string Pipe.Reader.t
+  type reader = int Pipe.Reader.t
 
   module type S = sig
     type t [@@deriving sexp]
 
-    val pipe : init:t -> unit -> string Pipe.Reader.t
+    val pipe : init:t -> unit -> int Pipe.Reader.t
   end
 
   module Int : S with type t = int = struct
@@ -48,7 +48,7 @@ module Noonce = struct
         ~f:
           (fun s ->
              let s' = s + 1 in
-             Some (Int.to_string s', s') |> return
+             Some (s', s') |> return
           )
   end
 
@@ -142,10 +142,10 @@ end
 module Request = struct
 
   type request_noonce =
-    {request:string; noonce:string} [@@deriving sexp, yojson]
+    {request:string; noonce:int} [@@deriving sexp, yojson]
 
   type t =
-    {request:string; noonce:string; payload:Yojson.Safe.json}
+    {request:string; noonce:int; payload:Yojson.Safe.json}
 
   let make ~request ~noonce payload =
     Pipe.read noonce >>= function
@@ -466,11 +466,11 @@ struct
       let path = path@["status"]
 
       type request = {
-        order_id:string;
+        order_id:int;
       } [@@deriving yojson, sexp]
 
       type response = {
-        order_id : string;
+        order_id : int;
         id : string;
         symbol : Symbol.t;
         exchange : Exchange.t;
