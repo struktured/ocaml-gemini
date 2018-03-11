@@ -2,7 +2,7 @@
 
 (library (
   (name gemini_test)
-  (flags (
+   (flags (
     :standard
     -open Core
     -open Async
@@ -10,4 +10,6 @@
   (library_flags (-linkall))
   (libraries (gemini ppx_inline_test.runtime-lib))
   (preprocess (pps (ppx_jane ppx_driver.runner)))
+  (synopsis "Gemini Client unit tester")
+
 ))

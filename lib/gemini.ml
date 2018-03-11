@@ -85,7 +85,6 @@ module Cfg = struct
   let make env =
     let module M = struct
       let env = env
-      let param = param ~env
       let version = version_1
       let api_host = host ~env
       let api_key = api_key ~env ()

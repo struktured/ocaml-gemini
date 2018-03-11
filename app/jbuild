@@ -2,9 +2,10 @@
 
 (executable (
   (name cli)
-  (public_name gemini-cli)
+  (public_name gemini)
   (libraries (gemini))
   (modules (cli))
+  (package gemini)
   (flags (
     :standard
     -open Core
