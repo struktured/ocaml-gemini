@@ -141,20 +141,20 @@ end
 
 module Request = struct
 
-  type request_noonce =
-    {request:string; noonce:int} [@@deriving sexp, yojson]
+  type request_nonce =
+    {request:string; nonce:int} [@@deriving sexp, yojson]
 
   type t =
-    {request:string; noonce:int; payload:Yojson.Safe.json}
+    {request:string; nonce:int; payload:Yojson.Safe.json}
 
-  let make ~request ~noonce payload =
-    Pipe.read noonce >>= function
-    | `Ok noonce -> return
-                      {request;noonce;payload}
+  let make ~request ~nonce payload =
+    Pipe.read nonce >>= function
+    | `Ok nonce -> return
+                      {request;nonce;payload}
     | `Eof -> assert false
 
-  let to_yojson {request;noonce;payload} : Yojson.Safe.json =
-    match request_noonce_to_yojson {request;noonce} with
+  let to_yojson {request;nonce;payload} : Yojson.Safe.json =
+    match request_nonce_to_yojson {request;nonce} with
     | `Assoc assoc ->
       (match payload with
        | `Null -> `Assoc assoc
@@ -165,7 +165,7 @@ module Request = struct
            (Yojson.Safe.to_string unsupported_yojson) ()
       )
     | #Yojson.Safe.json as unsupported_yojson ->
-      failwithf "expected json association for type request_noonce but got %S"
+      failwithf "expected json association for type request_nonce but got %S"
         (Yojson.Safe.to_string unsupported_yojson) ()
 
 end
@@ -183,19 +183,22 @@ module Service(Operation:Operation.S) =
 struct
   let post
       (module Cfg : Cfg.S)
-      (noonce : Noonce.reader)
+      (nonce : Noonce.reader)
       (request : Operation.request) :
     [ `Ok of Operation.response
     | Error.post] Deferred.t =
     let payload =
       Operation.request_to_yojson request in
     let path = path_to_string Operation.path in
-     Request.make ~noonce
+     Request.make ~nonce
       ~request:path payload >>=
     fun request ->
     (Request.to_yojson request |>
-     Yojson.Safe.to_string |>
-     Auth.of_payload |> return
+     Yojson.Safe.pretty_to_string |>
+     fun s ->
+     Log.Global.info "request: %s" s;
+     Log.Global.flushed () >>| fun () ->
+     Auth.of_payload s
     )
     >>= fun payload ->
     let headers =
