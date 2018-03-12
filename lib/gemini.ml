@@ -48,7 +48,7 @@ module Noonce = struct
         ~f:
           (fun s ->
              let s' = s + 1 in
-             Some (s', s') |> return
+             Some (s, s') |> return
           )
   end
 
@@ -202,6 +202,7 @@ struct
       Cohttp.Header.of_list
         ["Content-Type", "text/plain";
          "Content-Length", "0";
+         "Cache-Control", "no-cache";
          "X-GEMINI-PAYLOAD", Auth.to_string payload;
          "X-GEMINI-APIKEY", Cfg.api_key;
          "X-GEMINI-SIGNATURE",
@@ -592,30 +593,3 @@ let command : Command.t =
 
 
 end
-
-module Operations = struct
-  open V1
-  let all = [(module Order.New : Operation.S);
-             (module Order.Cancel);
-             (module Order.Cancel.All);
-             (module Order.Cancel.Session);
-             (module Order.Status);
-             (module Orders);
-             (module Heartbeat)
-            ]
-
-  let to_path_string (module Operation:Operation.S) =
-    path_to_string Operation.path
-
-  let of_path path =
-    let target = path_to_string path in
-    List.find_map all ~f:
-      (fun (module Op:Operation.S) ->
-        match String.equal
-                (to_path_string (module Op:Operation.S)) target with
-        | false -> None
-        | true -> Some (module Op:Operation.S)
-      )
-
-end
-
