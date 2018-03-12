@@ -41,8 +41,8 @@ module Nonce = struct
     val pipe : init:t -> unit -> int Pipe.Reader.t
   end
 
-  module Int : S with type t = int = struct
-    type t = int [@@deriving sexp, yojson]
+  module Counter : S with type t = int = struct
+    type t = int [@@deriving sexp]
     let pipe ~init () =
       Pipe.unfold ~init
         ~f:
@@ -52,6 +52,26 @@ module Nonce = struct
           )
   end
 
+  module File = struct
+
+    let create_nonce () =
+      Writer.save
+    let pipe ~init:filename () =
+      Pipe.unfold ~init:() ~f:
+        (fun _ ->
+           Reader.open_file ?buf_len:None
+             filename >>= Reader.really_read_line
+             ~wait_time:(Time.Span.of_ms 1.0) >>=
+           (function
+             | None -> return 0
+             | Some nonce -> return @@ Int.of_string nonce
+           ) >>= fun nonce ->
+           let nonce' = nonce + 1 in
+           Writer.save filename
+             ~contents:(sprintf "%d\n" nonce') >>= fun () ->
+           return @@ Some (nonce, ())
+        )
+  end
 end
 
 module Cfg = struct
@@ -69,7 +89,10 @@ module Cfg = struct
       | Some default -> default
 
   let host ~env =
-    sprintf "api.%s.gemini.com" (String.lowercase env)
+    let env = String.lowercase env in 
+    match env with
+    | "production" -> sprintf "api.gemini.com"
+    | _ -> sprintf "api.%s.gemini.com" env
   let version_1 = "v1"
 
   module type S = sig
@@ -149,8 +172,9 @@ module Request = struct
 
   let make ~request ~nonce payload =
     Pipe.read nonce >>= function
-    | `Ok nonce -> return
-                      {request;nonce;payload}
+    | `Ok nonce ->
+      return
+        {request;nonce;payload}
     | `Eof -> assert false
 
   let to_yojson {request;nonce;payload} : Yojson.Safe.json =
@@ -174,7 +198,8 @@ module Error = struct
   type http = [ `Bad_request of string
               | `Not_found
               | `Unauthorized of string] [@@deriving sexp]
-  type json = [`Json_parse_error of string] [@@deriving sexp]
+  type json_error = {message:string;body:string} [@@deriving sexp]
+  type json = [`Json_parse_error of json_error] [@@deriving sexp]
 
   type post = [http|json] [@@deriving sexp]
 end
@@ -238,7 +263,7 @@ struct
            let response = Operation.response_of_yojson yojson in
            match response with
            | Result.Ok ok -> `Ok ok
-           | Result.Error e -> `Json_parse_error e
+           | Result.Error e -> `Json_parse_error Error.{message=e;body=s}
         )
       )
     | `Not_found -> return `Not_found
@@ -253,6 +278,10 @@ struct
       failwiths (sprintf "unexpected status code (body=%S)" body)
         code Cohttp.Code.sexp_of_status_code
 
+  let nonce_file =
+    let root_path = Unix.getenv "HOME" |> Option.value ~default:"." in
+    sprintf "%s/.gemini/nonce.txt" root_path
+
   let command =
     let open Command.Let_syntax in
     (List.last_exn Operation.path,
@@ -266,7 +295,8 @@ struct
            Log.Global.info "request: %s"
              (Sexp.to_string request);
            let request = Operation.request_of_sexp request in
-           post config (Nonce.Int.pipe ~init:0 ()) request >>= function
+           post config
+             (Nonce.File.pipe ~init:nonce_file ()) request >>= function
            | `Ok response ->
              Log.Global.info "response: %s"
                (Sexp.to_string
