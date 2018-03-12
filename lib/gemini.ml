@@ -32,7 +32,7 @@ let path_to_summary ~has_subcommands
     )
 
 
-module Noonce = struct
+module Nonce = struct
   type reader = int Pipe.Reader.t
 
   module type S = sig
@@ -183,7 +183,7 @@ module Service(Operation:Operation.S) =
 struct
   let post
       (module Cfg : Cfg.S)
-      (nonce : Noonce.reader)
+      (nonce : Nonce.reader)
       (request : Operation.request) :
     [ `Ok of Operation.response
     | Error.post] Deferred.t =
@@ -266,7 +266,7 @@ struct
            Log.Global.info "request: %s"
              (Sexp.to_string request);
            let request = Operation.request_of_sexp request in
-           post config (Noonce.Int.pipe ~init:0 ()) request >>= function
+           post config (Nonce.Int.pipe ~init:0 ()) request >>= function
            | `Ok response ->
              Log.Global.info "response: %s"
                (Sexp.to_string
