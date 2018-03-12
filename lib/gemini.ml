@@ -160,6 +160,8 @@ module Operation = struct
       (response, string) Result.t
   end
 
+  type status=[`Ok | `Error of string]
+
 end
 
 module Request = struct
@@ -197,6 +199,7 @@ end
 module Error = struct
   type http = [ `Bad_request of string
               | `Not_found
+              | `Not_acceptable of string
               | `Unauthorized of string] [@@deriving sexp]
   type json_error = {message:string;body:string} [@@deriving sexp]
   type json = [`Json_parse_error of json_error] [@@deriving sexp]
@@ -267,6 +270,9 @@ struct
         )
       )
     | `Not_found -> return `Not_found
+    | `Not_acceptable ->
+      Cohttp_async.Body.to_string body >>| fun body ->
+      `Not_acceptable body
     | `Bad_request ->
       Cohttp_async.Body.to_string body >>| fun body ->
       `Bad_request body
@@ -429,12 +435,12 @@ module Order_type = struct
     match json with
     | `String s ->
       (match String.lowercase s with
-       | "exchange_limit" -> Result.Ok `Exchange_limit
+       | "exchange limit" -> Result.Ok `Exchange_limit
        | (_:string) ->
          Result.Error
            (
              sprintf
-               "order_type must be \"exchange_limit\", but got %s"
+               "order_type must be \"exchange limit\", but got %s"
                s
            )
       )
@@ -447,7 +453,7 @@ module Order_type = struct
         )
 
   let to_yojson = function
-    | `Exchange_limit -> `String "exchange_limit"
+    | `Exchange_limit -> `String "exchange limit"
 end
 
 module Order_execution_option = struct
@@ -510,7 +516,7 @@ struct
         exchange : Exchange.t;
         avg_execution_price : decimal;
         side : Side.t;
-        type_ : Order_type.t;
+        type_ : Order_type.t [@key "type"];
         timestamp : string;
         timestampms : int;
         is_live : bool;
@@ -538,8 +544,8 @@ struct
         amount:string;
         price:decimal; (* zarith *)
         side:Side.t;
-        type_:Order_type.t [@name "type"];
-        options: Order_execution_option.t
+        type_:Order_type.t [@key "type"];
+        options: Order_execution_option.t list;
       } [@@deriving sexp, yojson]
 
       type response = Status.response [@@deriving yojson, sexp]
