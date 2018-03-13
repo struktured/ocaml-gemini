@@ -622,12 +622,75 @@ module Orders = struct
   include Service(T)
 end
 
+module Timestamp = struct
+
+  type t = Time.t [@@deriving sexp]
+
+  type ms = t [@@deriving sexp]
+  type sec = t [@@deriving sexp]
+
+  let to_yojson t =
+    Time.to_span_since_epoch t |>
+    Time.Span.to_ms |>
+    Float.to_string_hum ~decimals:0 |>
+    fun s -> `String s
+
+  let of_yojson span_fn = function
+    `String s ->
+    Float.of_string s |>
+    span_fn |>
+    Time.of_span_since_epoch |>
+    fun ok -> Result.Ok ok
+    | #Yojson.Safe.json as json ->
+      Result.Error
+        (sprintf "expected json string but got %S"
+           (Yojson.Safe.pretty_to_string json))
+
+
+  let ms_of_yojson (ms:Yojson.Safe.json) = of_yojson Time.Span.of_ms ms
+  let ms_to_yojson (ms:ms) = to_yojson ms
+
+  let sec_of_yojson (sec:Yojson.Safe.json) = of_yojson Time.Span.of_sec sec
+  let sec_to_yojson (sec:sec) = to_yojson sec
+
+
+end
+
+module Mytrades = struct
+
+  type trade = {price:decimal;
+                amount:decimal;
+                timestamp:Timestamp.sec;
+                timestampms:Timestamp.ms;
+                type_: Side.t [@key "type"];
+                aggressor: bool;
+                fee_currency: string; (* TODO make enum *)
+                fee_amount : decimal;
+                order_id : string;
+                client_order_id : string;
+                is_auction_fill : bool;
+                break : string option [@default None] (* TODO make enum *)
+               } [@@deriving yojson, sexp]
+  module T = struct
+    let path = path@["mytrades"]
+    type request =
+      { symbol : Symbol.t;
+        limit_trades: int option [@default None];
+        timestamp: Timestamp.sec option [@default None]
+      } [@@deriving sexp, yojson]
+    type response = trade list [@@deriving yojson, sexp]
+  end
+  include T
+  include Service(T)
+end
+
 let command : Command.t =
   Command.group
     ~summary:"Gemini Command System"
     [Heartbeat.command;
      Order.command;
      Orders.command;
+     Mytrades.command
     ]
 
 
