@@ -743,6 +743,24 @@ module Tradevolume = struct
   include Service(T)
 end
 
+module Balances = struct
+
+  module T = struct
+    let path = path@["balances"]
+
+    type request = unit [@@deriving yojson, sexp]
+    type response =
+      {currency:Symbol.t;
+       amount:decimal;
+       available:decimal;
+       available_for_withdrawal:decimal [@key "availableForWithdrawal"];
+       type_: Exchange.t [@key "type"]
+      } [@@deriving yojson, sexp]
+  end
+
+  include T
+  include Service(T)
+end
 
 let command : Command.t =
   Command.group
@@ -751,8 +769,8 @@ let command : Command.t =
      Order.command;
      Orders.command;
      Mytrades.command;
-     Tradevolume.command
+     Tradevolume.command;
+     Balances.command
     ]
-
 
 end
