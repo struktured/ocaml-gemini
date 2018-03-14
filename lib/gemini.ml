@@ -153,6 +153,10 @@ module Nonce = struct
         Writer.save ~contents:(sprintf "%d\n" default) filename
 
     type t = string [@@deriving sexp]
+
+
+    (* TODO - too expensive- only check the file once, then do
+     * everything in memory *)
     let pipe ~init:filename () =
       Cfg.create_config_dir () >>= fun () ->
       create_nonce_file ?default:None filename >>= fun () ->
@@ -709,13 +713,45 @@ module Mytrades = struct
   include Service(T)
 end
 
+module Tradevolume = struct
+
+  module T = struct
+    let path = path@["tradevolume"]
+    type request = unit [@@deriving yojson, sexp]
+    type response =
+      {account_id:string;
+       symbol:Symbol.t;
+       base_currency:decimal;
+       notional_currency:decimal;
+       data_date:string;
+       total_volume_base:decimal;
+       maker_buy_sell_ratio:decimal;
+       buy_maker_base:decimal;
+       buy_maker_notional:decimal;
+       buy_maker_count:decimal;
+       sell_maker_base:decimal;
+       sell_maker_notional:decimal;
+       sell_maker_count:decimal;
+       buy_taker_base:decimal;
+       buy_taker_count:decimal;
+       sell_taker_base:decimal;
+       sell_taker_notional:decimal;
+       sell_taker_count:decimal;
+      } [@@deriving yojson, sexp]
+  end
+  include T
+  include Service(T)
+end
+
+
 let command : Command.t =
   Command.group
     ~summary:"Gemini Command System"
     [Heartbeat.command;
      Order.command;
      Orders.command;
-     Mytrades.command
+     Mytrades.command;
+     Tradevolume.command
     ]
 
 
