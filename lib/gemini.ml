@@ -32,49 +32,20 @@ let path_to_summary ~has_subcommands
     )
 
 
-module Nonce = struct
-  type reader = int Pipe.Reader.t
-
-  module type S = sig
-    type t [@@deriving sexp]
-
-    val pipe : init:t -> unit -> int Pipe.Reader.t
-  end
-
-  module Counter : S with type t = int = struct
-    type t = int [@@deriving sexp]
-    let pipe ~init () =
-      Pipe.unfold ~init
-        ~f:
-          (fun s ->
-             let s' = s + 1 in
-             Some (s, s') |> return
-          )
-  end
-
-  module File = struct
-
-    let create_nonce () =
-      Writer.save
-    let pipe ~init:filename () =
-      Pipe.unfold ~init:() ~f:
-        (fun _ ->
-           Reader.open_file ?buf_len:None
-             filename >>= Reader.really_read_line
-             ~wait_time:(Time.Span.of_ms 1.0) >>=
-           (function
-             | None -> return 0
-             | Some nonce -> return @@ Int.of_string nonce
-           ) >>= fun nonce ->
-           let nonce' = nonce + 1 in
-           Writer.save filename
-             ~contents:(sprintf "%d\n" nonce') >>= fun () ->
-           return @@ Some (nonce, ())
-        )
-  end
-end
-
 module Cfg = struct
+
+  let create_config_dir () =
+    let dirname = sprintf "%s/%s"
+      (Unix.getenv_exn "HOME") ".gemini" in
+    try_with ~extract_exn:true
+    (fun () -> Unix.mkdir ?p:None ?perm:None dirname) >>=
+    function
+    | Result.Ok () -> Deferred.unit
+    | Result.Error
+        (Unix.Unix_error (Unix.Error.EEXIST, _, _)) -> Deferred.unit
+    | Result.Error e ->
+      Log.Global.error "failed to create gemini config directory
+        at %S." dirname; raise e
 
   let param ?default ~name ~env () =
     let name = sprintf "GEMINI_%s_%s"
@@ -149,6 +120,60 @@ module Cfg = struct
 
 end
 
+module Nonce = struct
+  type reader = int Pipe.Reader.t
+
+  module type S = sig
+    type t [@@deriving sexp]
+
+    val pipe : init:t -> unit -> int Pipe.Reader.t Deferred.t
+  end
+
+  module Counter : S with type t = int = struct
+    type t = int [@@deriving sexp]
+    let pipe ~init () =
+      Pipe.unfold ~init
+        ~f:
+          (fun s ->
+             let s' = s + 1 in
+             Some (s, s') |> return
+          )
+    |> return
+  end
+
+  module File : S with type t = string = struct
+
+    let create_nonce_file ?(default=0) filename =
+      try_with ~extract_exn:true (fun () ->
+          Unix.with_file ~mode:[`Rdonly] filename
+        ~f:(fun fd ->  Deferred.unit)
+        ) >>= function
+      | Result.Ok _ -> Deferred.unit
+      | Result.Error _ ->
+        Writer.save ~contents:(sprintf "%d\n" default) filename
+
+    type t = string [@@deriving sexp]
+    let pipe ~init:filename () =
+      Cfg.create_config_dir () >>= fun () ->
+      create_nonce_file ?default:None filename >>= fun () ->
+      Pipe.unfold ~init:() ~f:
+        (fun _ ->
+          Reader.open_file ?buf_len:None
+             filename >>= Reader.really_read_line
+             ~wait_time:(Time.Span.of_ms 1.0) >>=
+           (function
+             | None -> return 0
+             | Some nonce -> return @@ Int.of_string nonce
+           ) >>= fun nonce ->
+           let nonce' = nonce + 1 in
+           Writer.save filename
+             ~contents:(sprintf "%d\n" nonce') >>= fun () ->
+           return @@ Some (nonce, ())
+        ) |> return
+  end
+end
+
+
 module Operation = struct
 
   module type S = sig
@@ -160,7 +185,7 @@ module Operation = struct
       (response, string) Result.t
   end
 
-  type status=[`Ok | `Error of string]
+  type status= [`Ok | `Error of string]
 
 end
 
@@ -285,7 +310,7 @@ struct
         code Cohttp.Code.sexp_of_status_code
 
   let nonce_file =
-    let root_path = Unix.getenv "HOME" |> Option.value ~default:"." in
+    let root_path = Unix.getenv_exn "HOME" in
     sprintf "%s/.gemini/nonce.txt" root_path
 
   let command =
@@ -301,8 +326,8 @@ struct
            Log.Global.info "request: %s"
              (Sexp.to_string request);
            let request = Operation.request_of_sexp request in
-           post config
-             (Nonce.File.pipe ~init:nonce_file ()) request >>= function
+           Nonce.File.pipe ~init:nonce_file () >>= fun nonce ->
+           post config nonce request >>= function
            | `Ok response ->
              Log.Global.info "response: %s"
                (Sexp.to_string

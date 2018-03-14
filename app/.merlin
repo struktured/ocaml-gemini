@@ -77,4 +77,5 @@ PKG uri.services
 PKG variantslib
 PKG yojson
 PKG zarith
+S .
 S ../lib

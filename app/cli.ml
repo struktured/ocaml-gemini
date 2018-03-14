@@ -1,2 +1,3 @@
+open Gemini
 let () =
- Command.run Gemini.V1.command
+ Command.run V1.command
