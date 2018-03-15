@@ -3,6 +3,21 @@ open Async
 
 type decimal = string [@@deriving yojson, sexp]
 
+module Error = struct
+  type http = [ `Bad_request of string
+              | `Not_found
+              | `Not_acceptable of string
+              | `Unauthorized of string] [@@deriving sexp]
+  type json_error = {message:string;body:string} [@@deriving sexp]
+  type json = [`Json_parse_error of json_error] [@@deriving sexp]
+
+  type detail = {reason:string;message:string} [@@deriving sexp, yojson]
+  type response = [`Error of detail] [@@deriving sexp]
+
+  type post = [http|json|response] [@@deriving sexp]
+end
+
+
 module Auth = struct
 
   type t = [`Base64 of Cstruct.t | Hex.t]
@@ -225,15 +240,100 @@ module Request = struct
 
 end
 
-module Error = struct
-  type http = [ `Bad_request of string
-              | `Not_found
-              | `Not_acceptable of string
-              | `Unauthorized of string] [@@deriving sexp]
-  type json_error = {message:string;body:string} [@@deriving sexp]
-  type json = [`Json_parse_error of json_error] [@@deriving sexp]
 
-  type post = [http|json] [@@deriving sexp]
+module Response = struct
+
+  module Json_result = struct
+    type t = [`Error | `Ok] [@@deriving sexp]
+    let of_yojson json =
+      match json with
+      | `String s ->
+        (match String.lowercase s with
+         | "error" -> Result.Ok `Error
+         | "ok" -> Result.Ok `Ok
+         | (_:string) ->
+           Result.Error
+             (
+               sprintf
+                 "result must be one of %S or %S, but got %S"
+                 "ok" "error" s
+             )
+        )
+      | #Yojson.Safe.json as json ->
+        Result.Error
+          (
+            sprintf
+              "symbol must be a json string, but got %s"
+              (Yojson.Safe.to_string json)
+          )
+
+    let to_yojson : t -> Yojson.Safe.json = function
+      | `Ok -> `String "ok"
+      | `Error -> `String "error"
+
+    let split = function
+      | `Assoc assoc as json ->
+      (List.Assoc.find assoc ~equal:String.equal
+        "result" |> function
+      | None -> Result.Ok (None, json)
+      | Some json' ->
+        of_yojson json' |> Result.map ~f:(fun x ->
+          (Some x,
+           `Assoc
+             (List.Assoc.remove assoc ~equal:String.equal "result")
+          )
+        )
+      )
+      | #Yojson.Safe.json as json ->
+        Result.Ok (None, json)
+
+  end
+
+  type result_field = {result:Json_result.t} [@@deriving yojson, sexp]
+
+  type t = {result:Json_result.t; payload:Yojson.Safe.json}
+
+  let to_yojson {result;payload} : Yojson.Safe.json =
+    match result_field_to_yojson {result} with
+    | `Assoc assoc ->
+      (match payload with
+       | `Null -> `Assoc assoc
+       | `Assoc assoc' ->
+         `Assoc (assoc @ assoc')
+       | #Yojson.Safe.json as unsupported_yojson ->
+         failwithf "expected json association for response payload but got %S"
+           (Yojson.Safe.to_string unsupported_yojson) ()
+      )
+    | #Yojson.Safe.json as unsupported_yojson ->
+      failwithf "expected json association for type result_field but got %S"
+        (Yojson.Safe.to_string unsupported_yojson) ()
+
+
+  let parse json ok_of_yojson =
+    match Json_result.split json with
+    | Result.Ok (result, payload) ->
+      (match result with
+      | None
+      | Some `Ok ->
+        (ok_of_yojson payload |> function
+          | Result.Ok x -> `Ok x
+          | Result.Error e ->
+            `Json_parse_error
+              Error.{message=e; body=Yojson.Safe.to_string payload}
+
+        )
+      | Some `Error ->
+        (Error.detail_of_yojson payload |> function
+          | Result.Ok x -> `Error x
+          | Result.Error e ->
+            `Json_parse_error
+              Error.{message=e; body=Yojson.Safe.to_string payload}
+        )
+      )
+    | Result.Error e ->
+      `Json_parse_error
+        Error.{message=e;body=Yojson.Safe.to_string json}
+
 end
 
 module Service(Operation:Operation.S) =
@@ -292,10 +392,7 @@ struct
         >>|
         (fun s ->
            let yojson = Yojson.Safe.from_string s in
-           let response = Operation.response_of_yojson yojson in
-           match response with
-           | Result.Ok ok -> `Ok ok
-           | Result.Error e -> `Json_parse_error Error.{message=e;body=s}
+           Response.parse yojson Operation.response_of_yojson
         )
       )
     | `Not_found -> return `Not_found
