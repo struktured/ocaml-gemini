@@ -3,8 +3,8 @@ open Async
 
 type int_number = int64 [@encoding `number] [@@deriving sexp, yojson]
 type int_string = int64 [@encoding `string] [@@deriving sexp, yojson]
-type float_number = float [@encoding `number] [@@deriving sexp, yojson]
-type decimal = string [@@deriving yojson, sexp]
+type decimal_number = float [@encoding `number] [@@deriving sexp, yojson]
+type decimal_string = string [@@deriving yojson, sexp]
 
 module Error = struct
   type http = [ `Bad_request of string
@@ -404,6 +404,7 @@ struct
         Cohttp_async.Body.to_string body
         >>|
         (fun s ->
+           Log.Global.debug "result as json:\n %s" s;
            let yojson = Yojson.Safe.from_string s in
            Response.parse yojson Operation.response_of_yojson
         )
@@ -731,7 +732,7 @@ struct
         id : int_string;
         symbol : Symbol.t;
         exchange : Exchange.t;
-        avg_execution_price : decimal;
+        avg_execution_price : decimal_string;
         side : Side.t;
         type_ : Order_type.t [@key "type"];
         timestamp : Timestamp.sec;
@@ -740,11 +741,11 @@ struct
         is_cancelled : bool;
         is_hidden : bool;
         was_forced : bool;
-        executed_amount : decimal;
-        remaining_amount : decimal;
+        executed_amount : decimal_string;
+        remaining_amount : decimal_string;
         options : Order_execution_option.t list;
-        price : decimal;
-        original_amount : decimal;
+        price : decimal_string;
+        original_amount : decimal_string;
       } [@@deriving yojson, sexp]
     end
     include T
@@ -758,8 +759,8 @@ struct
       type request = {
         client_order_id:string;
         symbol:Symbol.t;
-        amount:decimal;
-        price:decimal;
+        amount:decimal_string;
+        price:decimal_string;
         side:Side.t;
         type_:Order_type.t [@key "type"];
         options: Order_execution_option.t list;
@@ -841,14 +842,14 @@ end
 
 module Mytrades = struct
 
-  type trade = {price:decimal;
-                amount:decimal;
+  type trade = {price:decimal_string;
+                amount:decimal_string;
                 timestamp:Timestamp.sec;
                 timestampms:Timestamp.ms;
                 type_: Side.t [@key "type"];
                 aggressor: bool;
                 fee_currency: Currency.t;
-                fee_amount : decimal;
+                fee_amount : decimal_string;
                 tid:int_number;
                 order_id : int_string;
                 client_order_id : string option [@default None];
@@ -877,25 +878,25 @@ module Tradevolume = struct
        base_currency:Currency.t;
        notional_currency:Currency.t;
        data_date:string; (*TODO use timestamp or a date module with MMMM-DD-YY *)
-       total_volume_base:float_number;
-       maker_buy_sell_ratio:decimal;
-       buy_maker_base:decimal;
-       buy_maker_notional:decimal;
+       total_volume_base:decimal_number;
+       maker_buy_sell_ratio:decimal_number;
+       buy_maker_base:decimal_number;
+       buy_maker_notional:decimal_number;
        buy_maker_count:int_number;
-       sell_maker_base:decimal;
-       sell_maker_notional:decimal;
+       sell_maker_base:decimal_number;
+       sell_maker_notional:decimal_number;
        sell_maker_count:int_number;
-       buy_taker_base:decimal;
-       buy_taker_notional:decimal;
+       buy_taker_base:decimal_number;
+       buy_taker_notional:decimal_number;
        buy_taker_count:int_number;
-       sell_taker_base:decimal;
-       sell_taker_notional:decimal;
+       sell_taker_base:decimal_number;
+       sell_taker_notional:decimal_number;
        sell_taker_count:int_number;
       } [@@deriving yojson, sexp]
    module T = struct
     let path = path@["tradevolume"]
     type request = unit [@@deriving yojson, sexp]
-    type response = volume list [@@deriving yojson, sexp]
+    type response = volume list list [@@deriving yojson, sexp]
   end
   include T
   include Service(T)
@@ -909,9 +910,9 @@ module Balances = struct
     type request = unit [@@deriving yojson, sexp]
     type balance =
       {currency:Currency.t;
-       amount:decimal;
-       available:decimal;
-       available_for_withdrawal:decimal [@key "availableForWithdrawal"];
+       amount:decimal_string;
+       available:decimal_string;
+       available_for_withdrawal:decimal_string [@key "availableForWithdrawal"];
        type_: string [@key "type"]
       } [@@deriving yojson, sexp]
     type response = balance list [@@deriving yojson, sexp]
