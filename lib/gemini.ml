@@ -490,14 +490,14 @@ module Timestamp = struct
     | `Int i ->
       `Ok (Float.of_int i)
     | `Int64 i ->
-     `Ok (Float.of_int64 i)
+      `Ok (Float.of_int64 i)
     | #Yojson.Safe.json as json ->
       `Error json
     ) |>
     function
      | `Error json ->
       Result.Error
-        (sprintf "expected json string but got %S"
+        (sprintf "expected float as json but got %S"
            (Yojson.Safe.pretty_to_string json))
      | `Ok f ->
        span_fn f |>
@@ -730,7 +730,7 @@ struct
         avg_execution_price : decimal;
         side : Side.t;
         type_ : Order_type.t [@key "type"];
-        timestamp : string;
+        timestamp : Timestamp.sec;
         timestampms : Timestamp.ms;
         is_live : bool;
         is_cancelled : bool;
@@ -841,14 +841,16 @@ module Mytrades = struct
                 amount:decimal;
                 timestamp:Timestamp.sec;
                 timestampms:Timestamp.ms;
-                type_: Order_type.t [@key "type"];
+                type_: Side.t [@key "type"];
                 aggressor: bool;
-                fee_currency: Currency.t; (* TODO make enum *)
+                fee_currency: Currency.t;
                 fee_amount : decimal;
-                order_id : string;
-                client_order_id : string;
+                tid:(int64 [@encoding `string]);
+                order_id : (int64 [@encoding `string]);
+                client_order_id : string option [@default None];
                 is_auction_fill : bool;
-                break : string option [@default None] (* TODO make enum *)
+                exchange : Exchange.t;
+                (*break : string option [@default None] (* TODO make enum *) *)
                } [@@deriving yojson, sexp]
   module T = struct
     let path = path@["mytrades"]
