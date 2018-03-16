@@ -364,9 +364,8 @@ struct
     (Request.to_yojson request |>
      Yojson.Safe.pretty_to_string |>
      fun s ->
-     Log.Global.info "request as json: %s" s;
-     Log.Global.flushed () >>| fun () ->
-     Auth.of_payload s
+     Log.Global.debug "request as json:\n %s" s;
+     return @@ Auth.of_payload s
     )
     >>= fun payload ->
     let headers =
@@ -436,11 +435,13 @@ struct
          in
          fun () ->
            let request = Operation.request_of_sexp request in
+           Log.Global.info "request:\n %s"
+             (Operation.sexp_of_request request |> Sexp.to_string);
            let config = Cfg.get config in
            Nonce.File.pipe ~init:nonce_file () >>= fun nonce ->
            post config nonce request >>= function
            | `Ok response ->
-             Log.Global.info "response: %s"
+             Log.Global.info "response:\n %s"
                (Sexp.to_string_hum
                   (Operation.sexp_of_response response)
                ); Log.Global.flushed ()
