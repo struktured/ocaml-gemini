@@ -845,7 +845,7 @@ module Mytrades = struct
                 aggressor: bool;
                 fee_currency: Currency.t;
                 fee_amount : decimal;
-                tid:(int64 [@encoding `string]);
+                tid:(int64 [@encoding `number]);
                 order_id : (int64 [@encoding `string]);
                 client_order_id : string option [@default None];
                 is_auction_fill : bool;
