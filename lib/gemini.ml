@@ -111,9 +111,8 @@ module Cfg = struct
     include (val make "production" : S)
   end
 
-  let arg_type = Command.Arg_type.create
-    (fun s -> match String.lowercase s with
-
+  let of_string s =
+    match String.lowercase s with
       | "production" ->
         let module Cfg : S = Production () in
         (module Cfg : S)
@@ -123,15 +122,27 @@ module Cfg = struct
       | unsupported_env ->
         failwithf "environment %s not supported"
           unsupported_env ()
-    )
+
+  let arg_type = Command.Arg_type.create of_string
   let param =
     Command.Param.(
-      flag "-cfg" (required arg_type)
+      flag "-cfg" (optional arg_type)
         ~doc:(
           sprintf "STRING the configuration the client will connect with \
-                 (eg. sandbox or production)."
+                   (eg. sandbox or production. defaults to sandbox). Use \
+                    GEMINI_ENV to override the default value."
         )
     )
+
+  let get param =
+    match param with
+    | None ->
+      (match Unix.getenv "GEMINI_ENV" with
+      | Some env -> of_string env
+      | None -> (module Sandbox())
+      )
+    | Some param -> param
+
 
 end
 
@@ -425,6 +436,7 @@ struct
          in
          fun () ->
            let request = Operation.request_of_sexp request in
+           let config = Cfg.get config in
            Nonce.File.pipe ~init:nonce_file () >>= fun nonce ->
            post config nonce request >>= function
            | `Ok response ->
