@@ -441,7 +441,7 @@ struct
            post config nonce request >>= function
            | `Ok response ->
              Log.Global.info "response: %s"
-               (Sexp.to_string
+               (Sexp.to_string_hum
                   (Operation.sexp_of_response response)
                ); Log.Global.flushed ()
            | #Error.post as post_error ->
