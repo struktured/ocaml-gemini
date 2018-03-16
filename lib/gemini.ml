@@ -473,7 +473,7 @@ module Timestamp = struct
     Float.to_string_hum ~decimals:0 |>
     fun s -> `String s
 
-  let of_yojson span_fn json = 
+  let of_yojson span_fn json =
     (match json with
     | `String s ->
       `Ok (Float.of_string s)
