@@ -1,6 +1,9 @@
 open Core
 open Async
 
+type int_number = int64 [@encoding `number] [@@deriving sexp, yojson]
+type int_string = int64 [@encoding `string] [@@deriving sexp, yojson]
+type float_number = float [@encoding `number] [@@deriving sexp, yojson]
 type decimal = string [@@deriving yojson, sexp]
 
 module Error = struct
@@ -720,12 +723,12 @@ struct
       let path = path@["status"]
 
       type request = {
-        order_id:(int64 [@encoding `string])
+        order_id:int_number;
       } [@@deriving yojson, sexp]
 
       type response = {
-        order_id : (int64 [@encoding `string]);
-        id : (int64 [@encoding `string]);
+        order_id : int_string;
+        id : int_string;
         symbol : Symbol.t;
         exchange : Exchange.t;
         avg_execution_price : decimal;
@@ -846,8 +849,8 @@ module Mytrades = struct
                 aggressor: bool;
                 fee_currency: Currency.t;
                 fee_amount : decimal;
-                tid:(int64 [@encoding `number]);
-                order_id : (int64 [@encoding `string]);
+                tid:int_number;
+                order_id : int_string;
                 client_order_id : string option [@default None];
                 is_auction_fill : bool;
                 exchange : Exchange.t;
@@ -868,29 +871,31 @@ end
 
 module Tradevolume = struct
 
-  module T = struct
-    let path = path@["tradevolume"]
-    type request = unit [@@deriving yojson, sexp]
-    type response =
-      {account_id:string;
+    type volume =
+      {account_id:int_number;
        symbol:Symbol.t;
        base_currency:Currency.t;
        notional_currency:Currency.t;
-       data_date:string;
-       total_volume_base:decimal;
+       data_date:string; (*TODO use timestamp or a date module with MMMM-DD-YY *)
+       total_volume_base:float_number;
        maker_buy_sell_ratio:decimal;
        buy_maker_base:decimal;
        buy_maker_notional:decimal;
-       buy_maker_count:decimal;
+       buy_maker_count:int_number;
        sell_maker_base:decimal;
        sell_maker_notional:decimal;
-       sell_maker_count:decimal;
+       sell_maker_count:int_number;
        buy_taker_base:decimal;
-       buy_taker_count:decimal;
+       buy_taker_notional:decimal;
+       buy_taker_count:int_number;
        sell_taker_base:decimal;
        sell_taker_notional:decimal;
-       sell_taker_count:decimal;
+       sell_taker_count:int_number;
       } [@@deriving yojson, sexp]
+   module T = struct
+    let path = path@["tradevolume"]
+    type request = unit [@@deriving yojson, sexp]
+    type response = volume list [@@deriving yojson, sexp]
   end
   include T
   include Service(T)
