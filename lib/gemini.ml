@@ -460,6 +460,50 @@ module Heartbeat = struct
   include Service(T)
 end
 
+module Timestamp = struct
+
+  type t = Time.t [@@deriving sexp]
+
+  type ms = t [@@deriving sexp]
+  type sec = t [@@deriving sexp]
+
+  let to_yojson t =
+    Time.to_span_since_epoch t |>
+    Time.Span.to_ms |>
+    Float.to_string_hum ~decimals:0 |>
+    fun s -> `String s
+
+  let of_yojson span_fn json = 
+    (match json with
+    | `String s ->
+      `Ok (Float.of_string s)
+    | `Int i ->
+      `Ok (Float.of_int i)
+    | `Int64 i ->
+     `Ok (Float.of_int64 i)
+    | #Yojson.Safe.json as json ->
+      `Error json
+    ) |>
+    function
+     | `Error json ->
+      Result.Error
+        (sprintf "expected json string but got %S"
+           (Yojson.Safe.pretty_to_string json))
+     | `Ok f ->
+       span_fn f |>
+       Time.of_span_since_epoch |>
+       fun ok -> Result.Ok ok
+
+  let ms_of_yojson (ms:Yojson.Safe.json) = of_yojson Time.Span.of_ms ms
+  let ms_to_yojson (ms:ms) = to_yojson ms
+
+  let sec_of_yojson (sec:Yojson.Safe.json) = of_yojson Time.Span.of_sec sec
+  let sec_to_yojson (sec:sec) = to_yojson sec
+
+
+end
+
+
 module Symbol = struct
   type t = [`Btc_usd | `Eth_usd | `Eth_btc] [@@deriving sexp]
 
@@ -632,26 +676,26 @@ struct
       let path = path@["status"]
 
       type request = {
-        order_id:int;
+        order_id:(int64 [@encoding `string])
       } [@@deriving yojson, sexp]
 
       type response = {
-        order_id : int;
-        id : string;
+        order_id : (int64 [@encoding `string]);
+        id : (int64 [@encoding `string]);
         symbol : Symbol.t;
         exchange : Exchange.t;
         avg_execution_price : decimal;
         side : Side.t;
         type_ : Order_type.t [@key "type"];
         timestamp : string;
-        timestampms : int;
+        timestampms : Timestamp.ms;
         is_live : bool;
         is_cancelled : bool;
         is_hidden : bool;
         was_forced : bool;
-        executed_amount : int;
-        remaining_amount: int;
-        options: Order_execution_option.t list;
+        executed_amount : decimal;
+        remaining_amount : decimal;
+        options : Order_execution_option.t list;
         price : decimal;
         original_amount : decimal;
       } [@@deriving yojson, sexp]
@@ -666,9 +710,9 @@ struct
 
       type request = {
         client_order_id:string;
-        symbol:string;
-        amount:string;
-        price:decimal; (* zarith *)
+        symbol:Symbol.t;
+        amount:decimal;
+        price:decimal;
         side:Side.t;
         type_:Order_type.t [@key "type"];
         options: Order_execution_option.t list;
@@ -746,40 +790,6 @@ module Orders = struct
   end
   include T
   include Service(T)
-end
-
-module Timestamp = struct
-
-  type t = Time.t [@@deriving sexp]
-
-  type ms = t [@@deriving sexp]
-  type sec = t [@@deriving sexp]
-
-  let to_yojson t =
-    Time.to_span_since_epoch t |>
-    Time.Span.to_ms |>
-    Float.to_string_hum ~decimals:0 |>
-    fun s -> `String s
-
-  let of_yojson span_fn = function
-    `String s ->
-    Float.of_string s |>
-    span_fn |>
-    Time.of_span_since_epoch |>
-    fun ok -> Result.Ok ok
-    | #Yojson.Safe.json as json ->
-      Result.Error
-        (sprintf "expected json string but got %S"
-           (Yojson.Safe.pretty_to_string json))
-
-
-  let ms_of_yojson (ms:Yojson.Safe.json) = of_yojson Time.Span.of_ms ms
-  let ms_to_yojson (ms:ms) = to_yojson ms
-
-  let sec_of_yojson (sec:Yojson.Safe.json) = of_yojson Time.Span.of_sec sec
-  let sec_to_yojson (sec:sec) = to_yojson sec
-
-
 end
 
 module Mytrades = struct
