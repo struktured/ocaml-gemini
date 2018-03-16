@@ -353,7 +353,7 @@ struct
     (Request.to_yojson request |>
      Yojson.Safe.pretty_to_string |>
      fun s ->
-     Log.Global.info "request: %s" s;
+     Log.Global.info "request as json: %s" s;
      Log.Global.flushed () >>| fun () ->
      Auth.of_payload s
     )
@@ -424,8 +424,6 @@ struct
          and request = anon ("request" %: sexp)
          in
          fun () ->
-           Log.Global.info "request: %s"
-             (Sexp.to_string request);
            let request = Operation.request_of_sexp request in
            Nonce.File.pipe ~init:nonce_file () >>= fun nonce ->
            post config nonce request >>= function
