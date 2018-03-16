@@ -513,7 +513,40 @@ module Timestamp = struct
 
 end
 
+module Currency = struct
 
+  type t = [`Eth | `Btc | `Usd] [@@deriving sexp]
+
+  let of_yojson json =
+    match json with
+    | `String s ->
+      (match String.lowercase s with
+       | "btc" -> Result.Ok `Btc
+       | "eth" -> Result.Ok `Eth
+       | "usd" -> Result.Ok `Usd
+       | (_:string) ->
+         Result.Error
+           (
+             sprintf
+               "symbol must be \"btcusd, ethusd, or ethbtc\", but got %s"
+               s
+           )
+      )
+    | #Yojson.Safe.json as json ->
+      Result.Error
+        (
+          sprintf
+            "symbol must be a json string, but got %s"
+            (Yojson.Safe.to_string json)
+        )
+
+  let to_yojson = function
+    | `Btc -> `String "btc"
+    | `Eth -> `String "eth"
+    | `Usd -> `String "usd"
+
+
+end
 module Symbol = struct
   type t = [`Btc_usd | `Eth_usd | `Eth_btc] [@@deriving sexp]
 
@@ -808,9 +841,9 @@ module Mytrades = struct
                 amount:decimal;
                 timestamp:Timestamp.sec;
                 timestampms:Timestamp.ms;
-                type_: Side.t [@key "type"];
+                type_: Order_type.t [@key "type"];
                 aggressor: bool;
-                fee_currency: string; (* TODO make enum *)
+                fee_currency: Currency.t; (* TODO make enum *)
                 fee_amount : decimal;
                 order_id : string;
                 client_order_id : string;
@@ -838,8 +871,8 @@ module Tradevolume = struct
     type response =
       {account_id:string;
        symbol:Symbol.t;
-       base_currency:decimal;
-       notional_currency:decimal;
+       base_currency:Currency.t;
+       notional_currency:Currency.t;
        data_date:string;
        total_volume_base:decimal;
        maker_buy_sell_ratio:decimal;
@@ -866,13 +899,14 @@ module Balances = struct
     let path = path@["balances"]
 
     type request = unit [@@deriving yojson, sexp]
-    type response =
-      {currency:Symbol.t;
+    type balance =
+      {currency:Currency.t;
        amount:decimal;
        available:decimal;
        available_for_withdrawal:decimal [@key "availableForWithdrawal"];
-       type_: Exchange.t [@key "type"]
+       type_: string [@key "type"]
       } [@@deriving yojson, sexp]
+    type response = balance list [@@deriving yojson, sexp]
   end
 
   include T
