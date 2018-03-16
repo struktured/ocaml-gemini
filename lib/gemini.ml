@@ -464,7 +464,7 @@ module Heartbeat = struct
   module T = struct
     let path = path@["heartbeat"]
     type request = unit [@@deriving sexp, yojson]
-    type response = {result:bool} [@@deriving sexp, yojson]
+    type response = {result:bool [@default true]} [@@deriving sexp, yojson]
   end
   include T
   include Service(T)
