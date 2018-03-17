@@ -219,6 +219,10 @@ module Operation = struct
       (response, string) Result.t
   end
 
+  module type S_NO_ARG = sig
+    include S with type request = unit
+  end
+
   type status= [`Ok | `Error of string]
 
 end
@@ -351,7 +355,7 @@ module Response = struct
 
 end
 
-module Service(Operation:Operation.S) =
+module Post(Operation:Operation.S) =
 struct
   let post
       (module Cfg : Cfg.S)
@@ -424,11 +428,16 @@ struct
       Cohttp_async.Body.to_string body >>| fun body ->
       failwiths (sprintf "unexpected status code (body=%S)" body)
         code Cohttp.Code.sexp_of_status_code
+end
 
-  let nonce_file =
-    let root_path = Unix.getenv_exn "HOME" in
-    sprintf "%s/.gemini/nonce.txt" root_path
+let nonce_file =
+  let root_path = Unix.getenv_exn "HOME" in
+  sprintf "%s/.gemini/nonce.txt" root_path
 
+
+module Service(Operation:Operation.S) =
+struct
+  include Post(Operation)
   let command =
     let open Command.Let_syntax in
     (Operation.name,
@@ -463,6 +472,41 @@ struct
 
 end
 
+module Service_no_arg(Operation:Operation.S_NO_ARG) =
+struct
+  include Post(Operation)
+
+  let command =
+    let open Command.Let_syntax in
+    (Operation.name,
+     Command.async
+       ~summary:(path_to_summary ~has_subnames:false Operation.path)
+       [%map_open
+         let config = Cfg.param in
+         fun () ->
+           let request = () in
+           let config = Cfg.get config in
+           Nonce.File.pipe ~init:nonce_file () >>= fun nonce ->
+           post config nonce request >>= function
+           | `Ok response ->
+             Log.Global.info "response:\n %s"
+               (Sexp.to_string_hum
+                  (Operation.sexp_of_response response)
+               ); Log.Global.flushed ()
+           | #Error.post as post_error ->
+             failwiths
+               (sprintf
+                  "post for operation %S failed"
+                  (path_to_string Operation.path)
+               )
+               post_error
+               Error.sexp_of_post
+       ]
+    )
+
+end
+
+
 module V1 = struct
 let path = ["v1"]
 
@@ -474,7 +518,7 @@ module Heartbeat = struct
     type response = {result:bool [@default true]} [@@deriving sexp, yojson]
   end
   include T
-  include Service(T)
+  include Service_no_arg(T)
 end
 
 module Timestamp = struct
@@ -808,7 +852,7 @@ struct
         type response = {details:details} [@@deriving sexp, yojson]
       end
       include T
-      include Service(T)
+      include Service_no_arg(T)
     end
 
     module Session = struct
@@ -819,7 +863,7 @@ struct
         type response = {details:details} [@@deriving sexp, yojson]
       end
       include T
-      include Service(T)
+      include Service_no_arg(T)
     end
 
     let command : string * Command.t =
@@ -856,7 +900,7 @@ module Orders = struct
       Order.Status.response list [@@deriving yojson, sexp]
   end
   include T
-  include Service(T)
+  include Service_no_arg(T)
 end
 
 module Mytrades = struct
@@ -920,7 +964,7 @@ module Tradevolume = struct
     type response = volume list list [@@deriving yojson, sexp]
   end
   include T
-  include Service(T)
+  include Service_no_arg(T)
 end
 
 module Balances = struct
@@ -941,7 +985,7 @@ module Balances = struct
   end
 
   include T
-  include Service(T)
+  include Service_no_arg(T)
 end
 
 let command : Command.t =
