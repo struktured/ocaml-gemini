@@ -44,6 +44,7 @@ PKG logs
 PKG logs.fmt
 PKG magic-mime
 PKG nocrypto
+PKG ocplib-endian
 PKG ppx_assert.runtime-lib
 PKG ppx_bench.runtime-lib
 PKG ppx_compare.runtime-lib
@@ -75,6 +76,8 @@ PKG unix
 PKG uri
 PKG uri.services
 PKG variantslib
+PKG websocket
+PKG websocket-async
 PKG yojson
 PKG zarith
 S .

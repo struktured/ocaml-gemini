@@ -625,10 +625,13 @@ module Symbol = struct
             (Yojson.Safe.to_string json)
         )
 
-  let to_yojson = function
-    | `Btc_usd -> `String "btcusd"
-    | `Eth_usd -> `String "ethusd"
-    | `Eth_btc -> `String "ethbtc"
+  let to_string = function
+    | `Btc_usd -> "btcusd"
+    | `Eth_usd -> "ethusd"
+    | `Eth_btc -> "ethbtc"
+
+
+  let to_yojson t = to_string t |> fun s -> `String s
 
 end
 
@@ -991,8 +994,48 @@ end
 
 
 module Websocket = struct
+ 
 
-  module Market_data = struct
+
+  module type CHANNEL = sig
+    val path : string list
+    val name : string
+  end
+
+  let client (module Cfg:Cfg.S) (module Channel : CHANNEL) () =
+    let uri = Uri.make ~scheme:"wss" ~host:Cfg.api_host
+        ~path:(path_to_string Channel.path) () in
+    let extra_headers = None in
+    (*let initialized = None in
+    let random_string = None in
+    let app_to_ws:Websocket_async.Frame.t Pipe.Reader.t =
+      failwith "nyi" in
+    let ws_to_app:Websocket_async.Frame.t Pipe.Writer.t =
+      failwith "nyi" in
+    let net_to_ws:Reader.t =
+      failwith "nyi" in
+    let ws_to_net:Writer.t =
+      failwith "nyi" in *)
+    let socket = Socket.create Socket.Type.udp in
+    let writer = Writer.create (Socket.fd socket) in
+    let reader = Reader.create (Socket.fd socket) in
+    Websocket_async.client_ez
+    ~log:(Lazy.force Log.Global.log)
+    ~name:Channel.name
+    ?extra_headers
+    (*~app_to_ws
+    ~ws_to_app
+    ~net_to_ws
+    ~ws_to_net *)
+    uri
+    socket
+    reader
+    writer
+
+   module Market_data = struct
+
+    let name = "marketdata"
+    let path = path@["marketdata"]
 
     module Side =
     struct
@@ -1086,6 +1129,13 @@ module Websocket = struct
         timestamp : Timestamp.sec;
         timestampms : Timestamp.ms
       } [@@deriving sexp, yojson]
+
+    let subscribe (module Cfg : Cfg.S) (symbol:Symbol.t) =
+      let _path = path@[Symbol.to_string symbol] in
+      Deferred.unit
+
+
+
   end
 end
 let command : Command.t =
