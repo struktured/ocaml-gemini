@@ -435,7 +435,7 @@ let nonce_file =
   sprintf "%s/.gemini/nonce.txt" root_path
 
 
-module Service(Operation:Operation.S) =
+module Rest(Operation:Operation.S) =
 struct
   include Post(Operation)
   let command =
@@ -472,7 +472,7 @@ struct
 
 end
 
-module Service_no_arg(Operation:Operation.S_NO_ARG) =
+module Rest_no_arg(Operation:Operation.S_NO_ARG) =
 struct
   include Post(Operation)
 
@@ -518,7 +518,7 @@ module Heartbeat = struct
     type response = {result:bool [@default true]} [@@deriving sexp, yojson]
   end
   include T
-  include Service_no_arg(T)
+  include Rest_no_arg(T)
 end
 
 module Timestamp = struct
@@ -797,7 +797,7 @@ struct
       } [@@deriving yojson, sexp]
     end
     include T
-    include Service(T)
+    include Rest(T)
   end
 
   module New = struct
@@ -818,7 +818,7 @@ struct
       type response = Status.response [@@deriving yojson, sexp]
     end
     include T
-    include Service(T)
+    include Rest(T)
 
   end
 
@@ -836,7 +836,7 @@ struct
       type response = Status.response [@@deriving sexp, yojson]
       end
     include T
-    include Service(T)
+    include Rest(T)
   end
     type details =
           {cancelled_orders:Status.response list [@key "cancelledOrders"];
@@ -852,7 +852,7 @@ struct
         type response = {details:details} [@@deriving sexp, yojson]
       end
       include T
-      include Service_no_arg(T)
+      include Rest_no_arg(T)
     end
 
     module Session = struct
@@ -863,7 +863,7 @@ struct
         type response = {details:details} [@@deriving sexp, yojson]
       end
       include T
-      include Service_no_arg(T)
+      include Rest_no_arg(T)
     end
 
     let command : string * Command.t =
@@ -900,7 +900,7 @@ module Orders = struct
       Order.Status.response list [@@deriving yojson, sexp]
   end
   include T
-  include Service_no_arg(T)
+  include Rest_no_arg(T)
 end
 
 module Mytrades = struct
@@ -930,7 +930,7 @@ module Mytrades = struct
     type response = trade list [@@deriving yojson, sexp]
   end
   include T
-  include Service(T)
+  include Rest(T)
 
 end
 
@@ -964,7 +964,7 @@ module Tradevolume = struct
     type response = volume list list [@@deriving yojson, sexp]
   end
   include T
-  include Service_no_arg(T)
+  include Rest_no_arg(T)
 end
 
 module Balances = struct
@@ -985,7 +985,7 @@ module Balances = struct
   end
 
   include T
-  include Service_no_arg(T)
+  include Rest_no_arg(T)
 end
 
 let command : Command.t =
