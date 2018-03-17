@@ -41,10 +41,10 @@ end
 let path_to_string path = sprintf "/%s"
     (String.concat ~sep:"/" path)
 
-let path_to_summary ~has_subcommands
-    path = sprintf "Gemini %s command%s"
+let path_to_summary ~has_subnames
+    path = sprintf "Gemini %s Command%s"
     (String.concat ~sep:" " path)
-    (match has_subcommands with
+    (match has_subnames with
      | true -> "s"
      | false -> ""
     )
@@ -210,6 +210,7 @@ end
 module Operation = struct
 
   module type S = sig
+    val name : string
     val path : string list
     type request [@@deriving sexp]
     type response [@@deriving sexp]
@@ -430,9 +431,9 @@ struct
 
   let command =
     let open Command.Let_syntax in
-    (List.last_exn Operation.path,
+    (Operation.name,
      Command.async
-       ~summary:(path_to_summary ~has_subcommands:false Operation.path)
+       ~summary:(path_to_summary ~has_subnames:false Operation.path)
        [%map_open
          let config = Cfg.param
          and request = anon ("request" %: sexp)
@@ -467,6 +468,7 @@ let path = ["v1"]
 
 module Heartbeat = struct
   module T = struct
+    let name = "heartbeat"
     let path = path@["heartbeat"]
     type request = unit [@@deriving sexp, yojson]
     type response = {result:bool [@default true]} [@@deriving sexp, yojson]
@@ -716,11 +718,13 @@ end
 
 module Order =
 struct
+  let name = "order"
   let path = path@["order"]
 
   module Status =
   struct
     module T = struct
+      let name = "status"
       let path = path@["status"]
 
       type request = {
@@ -754,6 +758,7 @@ struct
 
   module New = struct
     module T = struct
+      let name = "new"
       let path = path@["new"]
 
       type request = {
@@ -774,21 +779,33 @@ struct
   end
 
   module Cancel = struct
-    module T = struct
-      let path = path@["cancel"]
+    let name = "cancel"
+    let path = path@["cancel"]
 
-      type request = {order_id:string} [@@deriving sexp, yojson]
+    module By_order_id = struct
+      module T = struct
+      let name = "by-order-id"
+      let path = path
+
+      type request = {order_id:int_string} [@@deriving sexp, yojson]
 
       type response = Status.response [@@deriving sexp, yojson]
-    end
+      end
     include T
     include Service(T)
+  end
+    type details =
+          {cancelled_orders:Status.response list [@key "cancelledOrders"];
+           cancel_rejects:Status.response list [@key "cancelRejects"]
+          } [@@deriving sexp, yojson]
 
     module All = struct
       module T = struct
+        let name = "all"
         let path = path@["all"]
         type request = unit [@@deriving sexp, yojson]
-        type response = {result:bool} [@@deriving sexp, yojson]
+
+        type response = {details:details} [@@deriving sexp, yojson]
       end
       include T
       include Service(T)
@@ -796,19 +813,20 @@ struct
 
     module Session = struct
       module T = struct
+        let name = "session"
         let path = path@["session"]
         type request = unit [@@deriving sexp, yojson]
-        type response = {result:bool} [@@deriving sexp, yojson]
+        type response = {details:details} [@@deriving sexp, yojson]
       end
       include T
       include Service(T)
     end
 
     let command : string * Command.t =
-    (List.last_exn path,
+    (name,
      Command.group
-       ~summary:(path_to_summary ~has_subcommands:true path)
-       [command;
+       ~summary:(path_to_summary ~has_subnames:true path)
+       [By_order_id.command;
         Session.command;
         All.command
        ]
@@ -816,9 +834,9 @@ struct
   end
 
   let command : string * Command.t =
-    (List.last_exn path,
+    (name,
      Command.group
-       ~summary:(path_to_summary ~has_subcommands:true path)
+       ~summary:(path_to_summary ~has_subnames:true path)
        [New.command;
         Cancel.command;
         Status.command
@@ -830,18 +848,18 @@ end
 module Orders = struct
 
   module T = struct
-  let path = path@["orders"]
+    let name = "orders"
+    let path = path@["orders"]
 
-  type request = unit [@@deriving sexp, yojson]
-  type response =
-    Order.Status.response list [@@deriving yojson, sexp]
+    type request = unit [@@deriving sexp, yojson]
+    type response =
+      Order.Status.response list [@@deriving yojson, sexp]
   end
   include T
   include Service(T)
 end
 
 module Mytrades = struct
-
   type trade = {price:decimal_string;
                 amount:decimal_string;
                 timestamp:Timestamp.sec;
@@ -858,6 +876,7 @@ module Mytrades = struct
                 (*break : string option [@default None] (* TODO make enum *) *)
                } [@@deriving yojson, sexp]
   module T = struct
+    let name = "mytrades"
     let path = path@["mytrades"]
     type request =
       { symbol : Symbol.t;
@@ -868,6 +887,7 @@ module Mytrades = struct
   end
   include T
   include Service(T)
+
 end
 
 module Tradevolume = struct
@@ -894,6 +914,7 @@ module Tradevolume = struct
        sell_taker_count:int_number;
       } [@@deriving yojson, sexp]
    module T = struct
+    let name = "tradevolume"
     let path = path@["tradevolume"]
     type request = unit [@@deriving yojson, sexp]
     type response = volume list list [@@deriving yojson, sexp]
@@ -905,6 +926,7 @@ end
 module Balances = struct
 
   module T = struct
+    let name = "balances"
     let path = path@["balances"]
 
     type request = unit [@@deriving yojson, sexp]
