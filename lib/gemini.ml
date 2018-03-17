@@ -1,6 +1,7 @@
 open Core
 open Async
 
+
 type int_number = int64 [@encoding `number] [@@deriving sexp, yojson]
 type int_string = int64 [@encoding `string] [@@deriving sexp, yojson]
 type decimal_number = float [@encoding `number] [@@deriving sexp, yojson]
@@ -988,6 +989,105 @@ module Balances = struct
   include Rest_no_arg(T)
 end
 
+
+module Websocket = struct
+
+  module Market_data = struct
+
+    module Side =
+    struct
+      type bid_ask = [`Bid | `Ask] [@@deriving sexp, yojson]
+      type auction = [`Auction] [@@deriving sexp, yojson]
+      type t = [bid_ask | auction] [@@deriving sexp, yojson]
+    end
+
+    type request = Symbol.t [@@deriving sexp, yojson]
+    type url_params =
+      { heartbeat : bool option [@default None] } [@@deriving sexp, yojson]
+
+    type message_type = [`Update | `Heartbeat] [@@deriving sexp, yojson]
+
+    type response =
+      { message_type : message_type [@key "type"];
+        socket_sequence: int_number
+      } [@@deriving sexp, yojson]
+
+    type event_type = [`Trade| `Change| `Auction] [@@deriving sexp, yojson]
+
+    type heartbeat = unit [@@deriving sexp, yojson]
+
+    module Reason = struct
+      type t = [`Place | `Trade | `Cancel | `Initial] [@@deriving sexp, yojson]
+    end
+
+    type change_event =
+      {price:decimal_string;
+       side:Side.bid_ask;
+       reason:Reason.t;
+       remaining:decimal_string;
+       delta:decimal_string
+      } [@@deriving sexp, yojson]
+
+    type trade_event =
+      {price:decimal_string;
+       amount:decimal_string;
+       maker_side:Side.t [@key "makerSide"]
+      } [@@deriving yojson, sexp]
+
+    type auction_open_event =
+      {auction_open_ms:Timestamp.ms;
+       auction_time_ms:Timestamp.ms;
+       first_indicative_ms:Timestamp.ms;
+       last_cancel_time_ms:Timestamp.ms
+      } [@@deriving sexp, yojson]
+
+
+    type auction_result = [`Success | `Failure] [@@deriving sexp, yojson]
+
+    type auction_indicative_price_event =
+      {eid:int_number;
+       result:auction_result;
+       time_ms:Timestamp.ms;
+       highest_bid_price:decimal_string;
+       lowest_ask_price:decimal_string;
+       collar_price:decimal_string;
+       indicative_price:decimal_string;
+       indicative_quantity:decimal_string
+      } [@@deriving sexp, yojson]
+
+
+    type auction_outcome_event =
+      {eid:int_number;
+       result:auction_result;
+       time_ms:Timestamp.ms;
+       highest_bid_price:decimal_string;
+       lowest_ask_price:decimal_string;
+       collar_price:decimal_string;
+       auction_price:decimal_string;
+       auction_quantity:decimal_string
+      } [@@deriving sexp, yojson]
+
+   type auction_event =
+     [
+       | `Auction_open of auction_open_event
+       | `Auction_indicative_price of auction_indicative_price_event
+       | `Auction_outcome of auction_outcome_event
+     ] [@@deriving sexp, yojson]
+
+   type event =
+      [ `Change of change_event
+      | `Trade of trade_event
+      | `Auction of auction_event
+      ] [@@deriving sexp, yojson]
+
+    type update =
+      { event_id : int_number [@key "eventId"];
+        events : event array;
+        timestamp : Timestamp.sec;
+        timestampms : Timestamp.ms
+      } [@@deriving sexp, yojson]
+  end
+end
 let command : Command.t =
   Command.group
     ~summary:"Gemini Command System"
