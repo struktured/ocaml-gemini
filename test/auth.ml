@@ -1,5 +1,6 @@
+
 open Gemini
-open V1
+open Gemini.V1
 
 let api_secret = "1234abcd"
 
