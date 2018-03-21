@@ -1,6 +1,3 @@
-open Core
-open Async
-
 module Auth = Auth
 
 type int_number = int64 [@encoding `number] [@@deriving sexp, yojson]
@@ -68,198 +65,83 @@ end
 
 module Currency = struct
 
-  type t = [`Eth | `Btc | `Usd] [@@deriving sexp]
-
-  let of_yojson json =
-    match json with
-    | `String s ->
-      (match String.lowercase s with
-       | "btc" -> Result.Ok `Btc
-       | "eth" -> Result.Ok `Eth
-       | "usd" -> Result.Ok `Usd
-       | (_:string) ->
-         Result.Error
-           (
-             sprintf
-               "symbol must be \"btcusd, ethusd, or ethbtc\", but got %s"
-               s
-           )
-      )
-    | #Yojson.Safe.json as json ->
-      Result.Error
-        (
-          sprintf
-            "symbol must be a json string, but got %s"
-            (Yojson.Safe.to_string json)
-        )
-
-  let to_yojson = function
-    | `Btc -> `String "btc"
-    | `Eth -> `String "eth"
-    | `Usd -> `String "usd"
-
+  module T = struct
+    type t = [`Eth | `Btc | `Usd] [@@deriving sexp, enumerate]
+    let to_string = function
+      | `Eth -> "eth"
+      | `Btc -> "btc"
+      | `Usd -> "usd"
+  end
+  include T
+  include Json.Make(T)
 
 end
+
 module Symbol = struct
-  type t = [`Btc_usd | `Eth_usd | `Eth_btc] [@@deriving sexp]
-
-  let of_yojson json =
-    match json with
-    | `String s ->
-      (match String.lowercase s with
-       | "btcusd" -> Result.Ok `Btc_usd
-       | "ethusd" -> Result.Ok `Eth_usd
-       | "ethbtc" -> Result.Ok `Eth_btc
-       | (_:string) ->
-         Result.Error
-           (
-             sprintf
-               "symbol must be \"btcusd, ethusd, or ethbtc\", but got %s"
-               s
-           )
-      )
-    | #Yojson.Safe.json as json ->
-      Result.Error
-        (
-          sprintf
-            "symbol must be a json string, but got %s"
-            (Yojson.Safe.to_string json)
-        )
-
-  let to_string = function
-    | `Btc_usd -> "btcusd"
-    | `Eth_usd -> "ethusd"
-    | `Eth_btc -> "ethbtc"
-
-
-  let to_yojson t = to_string t |> fun s -> `String s
+  module T = struct
+   type t = [`Btcusd | `Ethusd | `Ethbtc] [@@deriving sexp, enumerate]
+    let to_string = function
+      | `Btcusd -> "btcusd"
+      | `Ethusd -> "ethusd"
+      | `Ethbtc -> "ethbtc"
+  end
+  include T
+  include Json.Make(T)
 
 end
 
 
 module Exchange = struct
 
-  type t = [`Gemini] [@@deriving sexp]
-
-  let of_yojson json =
-    match json with
-    | `String s ->
-      (match String.lowercase s with
-       | "gemini" -> Result.Ok `Gemini
-       | (_:string) ->
-         Result.Error
-           (
-             sprintf
-               "exchange must be \"gemini\", but got %s"
-               s
-           )
-      )
-    | #Yojson.Safe.json as json ->
-      Result.Error
-        (
-          sprintf
-            "exchange must be a json string, but got %s"
-            (Yojson.Safe.to_string json)
-        )
-
-  let to_yojson = function
-    | `Gemini -> `String "gemini"
+  module T = struct
+    type t = [`Gemini] [@@deriving sexp, enumerate]
+    let to_string `Gemini = "gemini"
+  end
+  include T
+  include Json.Make(T)
 end
 
 module Side =
 struct
-  type t = [`Buy | `Sell] [@@deriving sexp]
+  module T = struct
+    type t = [`Buy | `Sell] [@@deriving sexp, enumerate]
 
-  let of_yojson json =
-    match json with
-    | `String s ->
-      (match String.lowercase s with
-       | "buy" -> Result.Ok `Buy
-       | "sell" -> Result.Ok `Sell
-       | (_:string) ->
-         Result.Error
-           (
-             sprintf
-               "side must be one of \"buy\" or \"sell\", but got %s"
-               s
-           )
-      )
-    | #Yojson.Safe.json as json ->
-      Result.Error
-        (
-          sprintf
-            "side must be a json string, but got %s"
-            (Yojson.Safe.to_string json)
-        )
-
-  let to_yojson = function
-    | `Buy -> `String "buy"
-    | `Sell -> `String "sell"
+    let to_string = function
+      | `Buy -> "buy"
+      | `Sell -> "sell"
+  end
+  include T
+  include Json.Make(T)
 end
 
 module Order_type = struct
-  type t = [`Exchange_limit] [@@deriving sexp]
+  module T = struct
+    type t = [`Exchange_limit] [@@deriving sexp, enumerate]
+    let to_string = function
+      | `Exchange_limit -> "exchange limit"
+   end
+  include T
+  include Json.Make(T)
 
-  let of_yojson json =
-    match json with
-    | `String s ->
-      (match String.lowercase s with
-       | "exchange limit" -> Result.Ok `Exchange_limit
-       | (_:string) ->
-         Result.Error
-           (
-             sprintf
-               "order_type must be \"exchange limit\", but got %s"
-               s
-           )
-      )
-    | #Yojson.Safe.json as json ->
-      Result.Error
-        (
-          sprintf
-            "order_type must be a json string, but got %s"
-            (Yojson.Safe.to_string json)
-        )
-
-  let to_yojson = function
-    | `Exchange_limit -> `String "exchange limit"
 end
 
 module Order_execution_option = struct
 
-  type t =
+  module T = struct
+    type t =
     [`Maker_or_cancel
     |`Immediate_or_cancel
     |`Auction_only
-    ] [@@deriving sexp]
+    ] [@@deriving sexp, enumerate]
 
-  let of_yojson json =
-    match json with
-    | `String s ->
-      (match String.lowercase s with
-       | "maker_or_cancel" -> Result.Ok `Maker_or_cancel
-       | "immediate_or_cancel" -> Result.Ok `Immediate_or_cancel
-       | "auction_only" -> Result.Ok `Auction_only
-       | (_:string) ->
-         Result.Error
-           (
-             sprintf
-               "order_execution_option must be \"exchange_limit\", but got %s"
-               s
-           )
-      )
-    | #Yojson.Safe.json as json ->
-      Result.Error
-        (
-          sprintf
-            "order_execution_option must be a json string, but got %s"
-            (Yojson.Safe.to_string json)
-        )
+    let to_string = function
+    | `Maker_or_cancel -> "maker_or_cancel"
+    | `Immediate_or_cancel -> "immediate_or_cancel"
+    | `Auction_only -> "auction_only"
 
-  let to_yojson : t -> Yojson.Safe.json = function
-    | `Maker_or_cancel -> `String "maker_or_cancel"
-    | `Immediate_or_cancel -> `String "immediate_or_cancel"
-    | `Auction_only -> `String "auction_only"
+  end
+  include T
+  include Json.Make(T)
 
 end
 
@@ -593,13 +475,22 @@ module Websocket = struct
           socket_sequence: int_number
         } [@@deriving sexp, yojson]
 
-      type event_type = [`Trade| `Change| `Auction] [@@deriving sexp, yojson]
+      type event_type = [`Trade | `Change | `Auction] [@@deriving sexp, enumerate]
 
       type heartbeat = unit [@@deriving sexp, yojson]
 
       module Reason = struct
+        module T = struct
         type t =
-          [`Place | `Trade | `Cancel | `Initial] [@@deriving sexp, yojson]
+          [`Place | `Trade | `Cancel | `Initial] [@@deriving sexp, enumerate]
+        let to_string = function
+          | `Place -> "place"
+          | `Trade -> "trade"
+          | `Cancel -> "cancel"
+          | `Initial -> "initial"
+        end
+        include T
+        include Json.Make(T)
       end
 
       type change_event =
@@ -624,12 +515,20 @@ module Websocket = struct
         } [@@deriving sexp, yojson]
 
 
-      type auction_result =
-        [`Success | `Failure] [@@deriving sexp, yojson]
-
+      module Auction_result = struct
+        module T = struct
+          type t =
+            [`Success | `Failure] [@@deriving sexp, enumerate]
+          let to_string = function
+            | `Success -> "success"
+            | `Failure -> "failure"
+        end
+        include T
+        include Json.Make(T)
+      end
       type auction_indicative_price_event =
         {eid:int_number;
-         result:auction_result;
+         result:Auction_result.t;
          time_ms:Timestamp.ms;
          highest_bid_price:decimal_string;
          lowest_ask_price:decimal_string;
@@ -641,7 +540,7 @@ module Websocket = struct
 
       type auction_outcome_event =
         {eid:int_number;
-         result:auction_result;
+         result:Auction_result.t;
          time_ms:Timestamp.ms;
          highest_bid_price:decimal_string;
          lowest_ask_price:decimal_string;
