@@ -1,4 +1,3 @@
-open Log.Global
 
 module W = Websocket_async
 
@@ -11,8 +10,14 @@ module type CHANNEL = sig
 end
 
 module Make(Channel:CHANNEL) = struct
-  let uri = Uri.of_string "abc"
 let client (module Cfg : Cfg.S) protocol extensions =
+  let uri = Uri.make
+      ~host:Cfg.api_host
+      ~scheme:"wss"
+      ~path:
+        (String.concat ~sep:"/" Channel.path)
+      ()
+      in
   let host = Option.value_exn ~message:"no host in uri"
       Uri.(host uri) in
   let port = Option.value_exn ~message:"no port inferred from scheme"
@@ -29,15 +34,17 @@ let client (module Cfg : Cfg.S) protocol extensions =
     let extra_headers = C.Header.init () in
     let extra_headers = Option.value_map protocol ~default:extra_headers
         ~f:(fun proto ->
-            C.Header.add extra_headers "Sec-Websocket-Protocol" proto)
+            C.Header.add
+              extra_headers "Sec-Websocket-Protocol" proto)
     in
     let extra_headers = Option.value_map extensions ~default:extra_headers
         ~f:(fun exts ->
-            C.Header.add extra_headers "Sec-Websocket-Extensions" exts)
+            C.Header.add
+              extra_headers "Sec-Websocket-Extensions" exts)
     in
     let r, w = W.client_ez
         ~extra_headers
-        ~log:Lazy.(force log)
+        ~log:Lazy.(force Log.Global.log)
         ~heartbeat:Time_ns.Span.(of_int_sec 5)
         uri s r w
     in
@@ -53,22 +60,22 @@ let client (module Cfg : Cfg.S) protocol extensions =
 
 let handle_client addr reader writer =
   let addr_str = Socket.Address.(to_string addr) in
-  info "Client connection from %s" addr_str;
+  Log.Global.info "Client connection from %s" addr_str;
   let app_to_ws, sender_write = Pipe.create () in
   let receiver_read, ws_to_app = Pipe.create () in
   let check_request req =
     let req_str = Format.asprintf "%a" Cohttp.Request.pp_hum req in
-    info "Incoming connnection request: %s" req_str ;
+    Log.Global.info "Incoming connnection request: %s" req_str ;
     Deferred.return (Cohttp.Request.(uri req |> Uri.path) = "/ws")
   in
   let rec loop () =
     Pipe.read receiver_read >>= function
     | `Eof ->
-      info "Client %s disconnected" addr_str;
+      Log.Global.info "Client %s disconnected" addr_str;
       Deferred.unit
     | `Ok ({ W.Frame.opcode; extension; final; content } as frame) ->
       let open W.Frame in
-      debug "<- %s" W.Frame.(show frame);
+      Log.Global.debug "<- %s" W.Frame.(show frame);
       let frame', closed =
         match opcode with
         | Opcode.Ping -> Some (create ~opcode:Opcode.Pong ~content ()), false
@@ -89,14 +96,14 @@ let handle_client addr reader writer =
         | None ->
           Deferred.unit
         | Some frame' ->
-          debug "-> %s" (show frame');
+          Log.Global.debug "-> %s" (show frame');
           Pipe.write sender_write frame'
       end >>= fun () ->
       if closed then Deferred.unit
       else loop ()
   in
   Deferred.any [
-    begin W.server ~log:Lazy.(force log)
+    begin W.server ~log:Lazy.(force Log.Global.log)
         ~check_request ~app_to_ws ~ws_to_app ~reader ~writer () >>= function
       | Error err when Error.to_exn err = Exit -> Deferred.unit
       | Error err -> Error.raise err
@@ -109,6 +116,7 @@ let command =
   let spec =
     let open Command.Spec in
     empty
+    +> Cfg.param
     +> flag "-protocol" (optional string)
       ~doc:"str websocket protocol header"
     +> flag "-extensions" (optional string)
@@ -117,14 +125,23 @@ let command =
     +> flag "-s" no_arg ~doc:" Run as server (default: no)"
   in
   let set_loglevel = function
-    | 2 -> set_level `Info
-    | 3 -> set_level `Debug
+    | 2 -> Log.Global.set_level `Info
+    | 3 -> Log.Global.set_level `Debug
     | _ -> ()
   in
-  let run protocol extension loglevel is_server () =
+  let run cfg
+      protocol extension loglevel is_server () =
+    let cfg = Cfg.get cfg in
+    let module Cfg = (val cfg:Cfg.S) in
+    let uri = Uri.make
+      ~host:Cfg.api_host
+      ~scheme:"https"
+      ~path:
+        (String.concat ~sep:"/" Channel.path)
+      () in
     Option.iter loglevel ~f:set_loglevel;
     match is_server with
-    | false -> client (module Cfg.Production ()) protocol extension
+    | false -> client (module Cfg) protocol extension
     | true ->
       let port = Option.value_exn
           ~message:"no port inferred from scheme"
@@ -135,6 +152,6 @@ let command =
       Tcp.Server.close_finished
   in
   Command.async_spec
-    ~summary:"telnet-like interface to Websockets" spec run
+    ~summary:"Gemini %s Websocket" spec run
 end
 
