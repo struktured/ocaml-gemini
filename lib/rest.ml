@@ -70,43 +70,27 @@ end
 module Response = struct
 
   module Json_result = struct
-    type t = [`Error | `Ok] [@@deriving sexp]
-    let of_yojson json =
-      match json with
-      | `String s ->
-        (match String.lowercase s with
-         | "error" -> Result.Ok `Error
-         | "ok" -> Result.Ok `Ok
-         | (_:string) ->
-           Result.Error
-             (
-               sprintf
-                 "result must be one of %S or %S, but got %S"
-                 "ok" "error" s
-             )
-        )
-      | #Yojson.Safe.json as json ->
-        Result.Error
-          (
-            sprintf
-              "symbol must be a json string, but got %s"
-              (Yojson.Safe.to_string json)
-          )
-
-    let to_yojson : t -> Yojson.Safe.json = function
-      | `Ok -> `String "ok"
-      | `Error -> `String "error"
+    module T = struct
+    type t = [`Error | `Ok] [@@deriving sexp, enumerate]
+    let to_string = function
+      | `Error -> "error"
+      | `Ok -> "ok"
+    end
+    include T
+    include Json.Make(T)
 
     let split = function
       | `Assoc assoc as json ->
       (List.Assoc.find assoc ~equal:String.equal
         "result" |> function
-      | None -> Result.Ok (None, json)
-      | Some json' ->
+       | None -> Result.Ok (None, json)
+       | Some json' ->
         of_yojson json' |> Result.map ~f:(fun x ->
           (Some x,
            `Assoc
-             (List.Assoc.remove assoc ~equal:String.equal "result")
+             (List.Assoc.remove
+                assoc ~equal:String.equal "result"
+             )
           )
         )
       )
@@ -115,7 +99,8 @@ module Response = struct
 
   end
 
-  type result_field = {result:Json_result.t} [@@deriving yojson, sexp]
+  type result_field =
+    {result:Json_result.t} [@@deriving yojson, sexp]
 
   type t = {result:Json_result.t; payload:Yojson.Safe.json}
 

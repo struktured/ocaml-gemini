@@ -3,7 +3,7 @@ module Auth = Auth
 type int_number = int64 [@encoding `number] [@@deriving sexp, yojson]
 type int_string = int64 [@encoding `string] [@@deriving sexp, yojson]
 type decimal_number = float [@encoding `number] [@@deriving sexp, yojson]
-type decimal_string = string [@@deriving yojson, sexp]
+type decimal_string = string [@@deriving sexp, yojson]
 
 
 module V1 = struct
@@ -475,7 +475,20 @@ module Websocket = struct
           socket_sequence: int_number
         } [@@deriving sexp, yojson]
 
-      type event_type = [`Trade | `Change | `Auction] [@@deriving sexp, enumerate]
+
+      module Event_type = struct
+        module T = struct
+          type t = [`Trade | `Change | `Auction]
+          [@@deriving sexp, enumerate]
+
+          let to_string = function
+            | `Trade -> "trade"
+            | `Change -> "change"
+            | `Auction -> "auction"
+        end
+        include T
+        include Json.Make(T)
+      end
 
       type heartbeat = unit [@@deriving sexp, yojson]
 
@@ -526,6 +539,7 @@ module Websocket = struct
         include T
         include Json.Make(T)
       end
+
       type auction_indicative_price_event =
         {eid:int_number;
          result:Auction_result.t;
@@ -561,7 +575,40 @@ module Websocket = struct
         [ `Change of change_event
         | `Trade of trade_event
         | `Auction of auction_event
-        ] [@@deriving sexp, yojson]
+        ] [@@deriving sexp]
+
+      let event_to_yojson = failwith "event_to_yojson: unsupported"
+
+      let event_of_yojson :
+        Yojson.Safe.json -> (event,string) Result.t = function
+        | `Assoc assoc as json ->
+          (List.Assoc.find assoc ~equal:String.equal
+             "type" |> function
+           | None ->
+             Result.failf "no event type in json payload: %s"
+               (Yojson.Safe.to_string json)
+           | Some event_type ->
+             Event_type.of_yojson event_type |> function
+             | Result.Error _ as e -> e
+             | Result.Ok event_type ->
+               let json' = `Assoc
+                   (List.Assoc.remove ~equal:String.equal assoc "type") in
+               (match event_type with
+                | `Change ->
+                  change_event_of_yojson json' |>
+                  Result.map ~f:(fun event -> `Change event)
+                | `Trade ->
+                  trade_event_of_yojson json' |>
+                  Result.map ~f:(fun event -> `Trade event)
+                | `Auction ->
+                  auction_event_of_yojson json' |>
+                  Result.map ~f:(fun event -> `Auction event)
+               )
+          )
+          | #Yojson.Safe.json as json ->
+            Result.failf "expected association type in json payload: %s"
+              (Yojson.Safe.to_string json)
+
 
       type update =
         { event_id : int_number [@key "eventId"];

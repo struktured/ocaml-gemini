@@ -9,6 +9,19 @@ module type CHANNEL = sig
 
 end
 
+
+(*module Response = struct
+
+  module type S = sig
+    type type_ [@@deriving sexp, enumerate]
+  end
+  type response =
+    { message_type : message_type [@key "type"];
+      socket_sequence: (int [@encoding `number)
+    } [@@deriving sexp, yojson]
+
+end *)
+
 module Make(Channel:CHANNEL) = struct
 let client (module Cfg : Cfg.S) protocol extensions =
   let uri = Uri.make
@@ -49,6 +62,7 @@ let client (module Cfg : Cfg.S) protocol extensions =
         uri s r w
     in
     Deferred.all_unit [
+      (* TODO decide what to do with input pipe *)
       Pipe.transfer Reader.(pipe @@ Lazy.force stdin) w ~f:begin fun s ->
         String.chop_suffix_exn s ~suffix:"\n"
       end;
