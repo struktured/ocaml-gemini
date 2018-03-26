@@ -480,7 +480,7 @@ module Websocket = struct
       end
 
       type response =
-        { message_type : message_type [@key "type"];
+        { message_type : Message_type.t [@key "type"];
           socket_sequence: int_number
         } [@@deriving sexp, yojson]
 
