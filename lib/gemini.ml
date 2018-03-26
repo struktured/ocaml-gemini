@@ -468,7 +468,16 @@ module Websocket = struct
       type request =
         { heartbeat : bool option [@default None] } [@@deriving sexp, yojson]
 
-      type message_type = [`Update | `Heartbeat] [@@deriving sexp, yojson]
+      module Message_type = struct
+        module T = struct
+          type t = [`Update | `Heartbeat] [@@deriving sexp, enumerate]
+          let to_string = function
+            | `Update -> "update"
+            | `Heartbeat -> "heartbeat"
+        end
+        include T
+        include Json.Make(T)
+      end
 
       type response =
         { message_type : message_type [@key "type"];
