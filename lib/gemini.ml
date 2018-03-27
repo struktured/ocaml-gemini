@@ -623,8 +623,8 @@ end
       type update =
         { event_id : int_number [@key "eventId"];
           events : event array;
-          timestamp : Timestamp.sec;
-          timestampms : Timestamp.ms
+          timestamp : Timestamp.sec option [@default None];
+          timestampms : Timestamp.ms option [@default None]
         } [@@deriving sexp, yojson]
 
       type message =
@@ -632,7 +632,7 @@ end
 
       type response =
         {
-          sequence_number : int_number;
+          socket_sequence : int_number;
           message : message
         } [@@deriving sexp]
 
@@ -644,26 +644,26 @@ end
         | `Assoc assoc as json ->
           (
             (
-              List.Assoc.find ~equal:String.equal assoc "type",
-              List.Assoc.find ~equal:String.equal assoc "sequence_number"
+              List.Assoc.find ~equal:String.equal assoc "socket_sequence",
+              List.Assoc.find ~equal:String.equal assoc "type"
             ) |> function
             | (None, _) ->
              Result.failf "no sequence number in json payload: %s"
                (Yojson.Safe.to_string json)
-           | (_, None) ->
+            | (_, None) ->
              Result.failf "no message type in json payload: %s"
                (Yojson.Safe.to_string json)
-            | (Some sequence_number, Some message_type) ->
+            | (Some socket_sequence, Some message_type) ->
               Result.both
-                (int_number_of_yojson sequence_number)
+                (int_number_of_yojson socket_sequence)
                 (Message_type.of_yojson message_type) |> function
              | Result.Error _ as e -> e
-             | Result.Ok (sequence_number, message_type) ->
+             | Result.Ok (socket_sequence, message_type) ->
                let json' = `Assoc
                    (List.Assoc.remove
                       ~equal:String.equal assoc "type" |> fun assoc ->
                     List.Assoc.remove
-                      ~equal:String.equal assoc "sequence_number"
+                      ~equal:String.equal assoc "socket_sequence"
                    ) in
                (
                  (match message_type with
@@ -675,11 +675,11 @@ end
                     Result.map ~f:(fun event -> `Update event)
                  )
                  |> Result.map
-                   ~f:(fun message -> {sequence_number;message})
+                   ~f:(fun message -> {socket_sequence;message})
                )
           )
           | #Yojson.Safe.json as json ->
-            Result.failf "response_of_yojson:expected association type\ 
+            Result.failf "response_of_yojson:expected association type \
             in json payload: %s"
               (Yojson.Safe.to_string json)
 

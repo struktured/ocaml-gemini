@@ -15,11 +15,13 @@ let client (module Cfg : Cfg.S) protocol extensions =
         (String.concat ~sep:"/" Channel.path)
       ()
       in
+  Log.Global.info "Ws.client: uri=%s"
+    (Uri.to_string uri);
   let host = Option.value_exn ~message:"no host in uri"
       Uri.(host uri) in
-  let port = Option.value_exn ~message:"no port inferred from scheme"
+  let port = Option.value ~default:443
       Uri_services.(tcp_port_of_uri uri) in
-  let scheme = Option.value_exn ~message:"no scheme in uri"
+  let scheme = Option.value ~default:"wss"
       Uri.(scheme uri) in
   let tcp_fun s r w =
     Socket.(setopt s Opt.nodelay true);
@@ -43,13 +45,14 @@ let client (module Cfg : Cfg.S) protocol extensions =
         ~log:Lazy.(force Log.Global.log)
         ~heartbeat:Time_ns.Span.(of_int_sec 5)
         uri s r w
-    in (*
+    in Deferred.both
       (* TODO decide what to do with input pipe *)
-      Pipe.transfer Reader.(pipe @@ Lazy.force stdin) w ~f:begin fun s ->
+      (Pipe.transfer Reader.(pipe @@ Lazy.force stdin) w ~f:begin fun s ->
         String.chop_suffix_exn s ~suffix:"\n"
-      end; *) return @@
-      Pipe.map r ~f:(fun s ->
-          Yojson.Safe.from_string s |> Channel.response_of_yojson)
+      end)  (return @@
+             Pipe.map r ~f:(fun s ->
+                 Yojson.Safe.from_string s |> Channel.response_of_yojson)
+            )
     (*]*)
   in
   let hostport = Host_and_port.create host port in
@@ -133,19 +136,25 @@ let command =
     let module Cfg = (val cfg:Cfg.S) in
     Option.iter loglevel ~f:set_loglevel;
     client (module Cfg) protocol extension >>=
-    Pipe.iter ~f:
-      (function 
-        | Result.Ok response ->
+    fun (_stdin, pipe) ->
+    let rec loop () =
+    Pipe.values_available pipe >>= function
+    | `Eof -> Deferred.unit
+    | `Ok ->
+    Pipe.read pipe >>=
+      (function
+        | `Ok (Result.Ok response) ->
           Channel.sexp_of_response response |>
           Sexp.to_string_hum |> fun s ->
           Log.Global.info "market data: %s" s;
           Deferred.unit
-        | Result.Error e ->
+        | `Ok (Result.Error e) ->
           Log.Global.error "market data deserialization error: %s"
             e;
           Deferred.unit
-      )
-
+        | `Eof -> Deferred.unit
+      ) >>= loop in
+    loop ()
   in
   Channel.name,
   Command.async_spec
