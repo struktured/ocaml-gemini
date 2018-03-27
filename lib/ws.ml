@@ -49,10 +49,18 @@ let client (module Cfg : Cfg.S) protocol extensions =
       (* TODO decide what to do with input pipe *)
       (Pipe.transfer Reader.(pipe @@ Lazy.force stdin) w ~f:begin fun s ->
         String.chop_suffix_exn s ~suffix:"\n"
-      end)  (return @@
-             Pipe.map r ~f:(fun s ->
-                 Yojson.Safe.from_string s |> Channel.response_of_yojson)
-            )
+      end)
+      (Pipe.transfer
+         (Pipe.map r ~f:(fun s ->
+              Yojson.Safe.from_string s
+              |> Channel.response_of_yojson
+              |> Result.ok_or_failwith
+            |> Channel.sexp_of_response |>
+            fun s -> sprintf "%s\n" (Sexp.to_string_hum s))
+         )
+         Writer.(pipe @@ Lazy.force stderr)
+         ~f:Fn.id
+      )
     (*]*)
   in
   let hostport = Host_and_port.create host port in
@@ -135,26 +143,7 @@ let command =
     let cfg = Cfg.get cfg in
     let module Cfg = (val cfg:Cfg.S) in
     Option.iter loglevel ~f:set_loglevel;
-    client (module Cfg) protocol extension >>=
-    fun (_stdin, pipe) ->
-    let rec loop () =
-    Pipe.values_available pipe >>= function
-    | `Eof -> Deferred.unit
-    | `Ok ->
-    Pipe.read pipe >>=
-      (function
-        | `Ok (Result.Ok response) ->
-          Channel.sexp_of_response response |>
-          Sexp.to_string_hum |> fun s ->
-          Log.Global.info "market data: %s" s;
-          Deferred.unit
-        | `Ok (Result.Error e) ->
-          Log.Global.error "market data deserialization error: %s"
-            e;
-          Deferred.unit
-        | `Eof -> Deferred.unit
-      ) >>= loop in
-    loop ()
+    client (module Cfg) protocol extension >>= fun _ -> Deferred.unit
   in
   Channel.name,
   Command.async_spec

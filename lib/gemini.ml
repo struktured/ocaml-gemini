@@ -469,7 +469,8 @@ end
         } [@@deriving sexp, yojson]
 
       type trade_event =
-        {price:decimal_string;
+        {tid:int_number;
+         price:decimal_string;
          amount:decimal_string;
          maker_side:Side.t [@key "makerSide"]
         } [@@deriving yojson, sexp]
@@ -608,6 +609,8 @@ end
                   change_event_of_yojson json' |>
                   Result.map ~f:(fun event -> `Change event)
                 | `Trade ->
+                  Log.Global.info "trade_event_of_yojson: %s"
+                    (Yojson.Safe.to_string json');
                   trade_event_of_yojson json' |>
                   Result.map ~f:(fun event -> `Trade event)
                 | `Auction ->
