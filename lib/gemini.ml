@@ -1,4 +1,5 @@
 module Auth = Auth
+module Result = Json.Result
 
 type int_number = int64 [@encoding `number] [@@deriving sexp, yojson]
 type int_string = int64 [@encoding `string] [@@deriving sexp, yojson]
@@ -456,9 +457,35 @@ module Websocket = struct
 
     module Side =
     struct
-      type bid_ask = [`Bid | `Ask] [@@deriving sexp, yojson]
-      type auction = [`Auction] [@@deriving sexp, yojson]
-      type t = [bid_ask | auction] [@@deriving sexp, yojson]
+      module Bid_ask = struct
+        module T = struct
+          type t = [`Bid | `Ask] [@@deriving sexp, enumerate]
+          let to_string : [<t] -> string = function
+            | `Bid -> "bid"
+            | `Ask -> "ask"
+        end
+        include T
+        include Json.Make(T)
+      end
+
+      module Auction = struct
+          module T = struct
+            type t = [`Auction] [@@deriving sexp, enumerate]
+            let to_string = function
+                `Auction -> "auction"
+          end
+          include T
+          include Json.Make(T)
+      end
+
+      module T = struct
+        type t = [Bid_ask.t | Auction.t] [@@deriving sexp, enumerate]
+        let to_string : [<t] -> string = function
+          | #Bid_ask.t as bid_ask -> Bid_ask.to_string bid_ask
+          | #Auction.t as auction -> Auction.to_string auction
+      end
+      include T
+      include Json.Make(T)
     end
 
     module T = struct
@@ -478,12 +505,6 @@ module Websocket = struct
         include T
         include Json.Make(T)
       end
-
-      type response =
-        { message_type : Message_type.t [@key "type"];
-          socket_sequence: int_number
-        } [@@deriving sexp, yojson]
-
 
       module Event_type = struct
         module T = struct
@@ -517,7 +538,7 @@ module Websocket = struct
 
       type change_event =
         {price:decimal_string;
-         side:Side.bid_ask;
+         side:Side.Bid_ask.t;
          reason:Reason.t;
          remaining:decimal_string;
          delta:decimal_string
@@ -572,13 +593,68 @@ module Websocket = struct
          auction_quantity:decimal_string
         } [@@deriving sexp, yojson]
 
+      module Auction_event_type = struct
+        module T = struct
+          type t =
+            [ `Auction_open
+            | `Auction_indicative_price
+            | `Auction_outcome ]
+          [@@deriving sexp, enumerate]
+
+          let to_string = function
+            | `Auction_open ->
+              "auction_open"
+            | `Auction_indicative_price ->
+              "auction_indicative_price"
+            | `Auction_outcome ->
+              "auction_outcome"
+        end
+        include T
+        include Json.Make(T)
+      end
+
       type auction_event =
         [
           | `Auction_open of auction_open_event
           | `Auction_indicative_price of
               auction_indicative_price_event
           | `Auction_outcome of auction_outcome_event
-        ] [@@deriving sexp, yojson]
+        ] [@@deriving sexp]
+
+      let auction_event_to_yojson :
+        auction_event -> Yojson.Safe.json =
+        failwith "auction_event_to_yojson: unsupported"
+
+      let auction_event_of_yojson :
+        Yojson.Safe.json -> (auction_event, string) Result.t = function
+        | `Assoc assoc as json ->
+          (List.Assoc.find assoc ~equal:String.equal
+             "type" |> function
+           | None ->
+             Result.failf "no auction event type in json payload: %s"
+               (Yojson.Safe.to_string json)
+           | Some event_type ->
+             Auction_event_type.of_yojson event_type |> function
+             | Result.Error _ as e -> e
+             | Result.Ok event_type ->
+               let json' = `Assoc
+                   (List.Assoc.remove ~equal:String.equal assoc "type") in
+               (match event_type with
+                | `Auction_open ->
+                  auction_open_event_of_yojson json' |>
+                  Result.map ~f:(fun event -> `Auction_open event)
+                | `Auction_indicative_price ->
+                  auction_indicative_price_event_of_yojson json' |>
+                  Result.map ~f:(fun event -> `Auction_indicative_price event)
+                | `Auction_outcome ->
+                  auction_outcome_event_of_yojson json' |>
+                  Result.map ~f:(fun event -> `Auction_outcome event)
+               )
+          )
+          | #Yojson.Safe.json as json ->
+            Result.failf "expected association type in json payload: %s"
+              (Yojson.Safe.to_string json)
+
 
       type event =
         [ `Change of change_event
@@ -625,6 +701,62 @@ module Websocket = struct
           timestamp : Timestamp.sec;
           timestampms : Timestamp.ms
         } [@@deriving sexp, yojson]
+
+      type message =
+        [`Heartbeat of heartbeat | `Update of update] [@@deriving sexp]
+
+      type response =
+        {
+          sequence_number : int_number;
+          message : message
+        } [@@deriving sexp]
+
+      let response_to_yojson : response -> Yojson.Safe.json =
+        failwith "response_to_yojson: unsupported"
+
+      let response_of_yojson :
+        Yojson.Safe.json -> (response, string) Result.t = function
+        | `Assoc assoc as json ->
+          (
+            (
+              List.Assoc.find ~equal:String.equal assoc "type",
+              List.Assoc.find ~equal:String.equal assoc "sequence_number"
+            ) |> function
+            | (None, _) ->
+             Result.failf "no sequence number in json payload: %s"
+               (Yojson.Safe.to_string json)
+           | (_, None) ->
+             Result.failf "no message type in json payload: %s"
+               (Yojson.Safe.to_string json)
+            | (Some sequence_number, Some message_type) ->
+              Result.both
+                (int_number_of_yojson sequence_number)
+                (Message_type.of_yojson message_type) |> function
+             | Result.Error _ as e -> e
+             | Result.Ok (sequence_number, message_type) ->
+               let json' = `Assoc
+                   (List.Assoc.remove
+                      ~equal:String.equal assoc "type" |> fun assoc ->
+                    List.Assoc.remove
+                      ~equal:String.equal assoc "sequence_number"
+                   ) in
+               (
+                 (match message_type with
+                  | `Heartbeat ->
+                    heartbeat_of_yojson json' |>
+                    Result.map ~f:(fun event -> `Heartbeat event)
+                  | `Update ->
+                    update_of_yojson json' |>
+                    Result.map ~f:(fun event -> `Update event)
+                 )
+                 |> Result.map
+                   ~f:(fun message -> {sequence_number;message})
+               )
+          )
+          | #Yojson.Safe.json as json ->
+            Result.failf "response_of_yojson:expected association type\ 
+            in json payload: %s"
+              (Yojson.Safe.to_string json)
 
     end
     include T

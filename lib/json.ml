@@ -1,4 +1,17 @@
 
+
+module Result = struct
+  include Result
+  let both x y : (('a * 'b), 'error) t =
+    match x with 
+    | Result.Ok x ->
+      (match y with
+       | Result.Ok y -> Result.Ok (x,y)
+       | Result.Error _ as e -> e
+      )
+    | Result.Error _ as e -> e
+
+end
 module type ENUM_STRING = sig
   type t [@@deriving enumerate]
   val to_string : t -> string
