@@ -376,84 +376,8 @@ module Balances = struct
   include Rest.Make_no_arg(T)
 end
 
-
-module Websocket = struct
-
-  module type CHANNEL = sig
-    val path : string list
-    val name : string
-    type request [@@deriving sexp, yojson]
-  end
-
-  module Subscribe(Channel:CHANNEL) = struct
-    let subscribe
-        (module Cfg:Cfg.S)
-        =
-      let uri = Uri.make ~scheme:"wss" ~host:Cfg.api_host
-          ~path:(Path.to_string Channel.path) () in
-      Log.Global.info "uri: %s" (Uri.to_string uri);
-      Unix.Inet_addr.of_string_or_getbyname
-        (Uri.to_string uri) >>= fun inet_addr ->
-      Log.Global.info "inet_addr: %s"
-        (Unix.Inet_addr.to_string inet_addr);
-      let addr = Socket.Address.Inet.create inet_addr
-          ~port:443 in
-      Log.Global.info "addr: %s"
-        (Socket.Address.Inet.to_string addr);
-      let extra_headers = None in
-      let socket = Socket.create Socket.Type.tcp in
-      return socket
-      (*Socket.connect socket addr*) >>|
-      fun socket ->
-      Log.Global.info "connected to websocket";
-      let writer = Writer.create (Socket.fd socket) in
-      let reader = Reader.create (Socket.fd socket) in
-      let reader, writer =
-        Websocket_async.client_ez
-          ~log:(Lazy.force Log.Global.log)
-          ~name:Channel.name
-          ?extra_headers
-          uri
-          socket
-          reader
-          writer in
-      reader,writer
-
-    let command =
-    let open Command.Let_syntax in
-    (Channel.name,
-     Command.async
-       ~summary:(Path.to_summary ~has_subnames:false Channel.path)
-       [%map_open
-         let config = Cfg.param
-       (*  and request = anon ("request" %: sexp)*)
-         in
-         fun () ->
-(*           let request = Channel.request_of_sexp request in
-           Log.Global.info "request:\n %s"
-             (Channel.sexp_of_request request |> Sexp.to_string); *)
-           let config = Cfg.get config in
-           subscribe config >>= fun (reader,_writer) ->
-           let rec process () =
-             Log.Global.info "process ()";
-             Log.Global.flushed () >>= fun () ->
-           Pipe.values_available reader >>=
-           function
-           | `Eof -> Deferred.unit
-           | `Ok ->
-            (Pipe.read reader >>= function
-            | `Ok x ->
-              Log.Global.info "frame: %s" x;
-              process ()
-            | `Eof -> Deferred.unit
-            ) in
-           process ()
-       ]
-    )
-
-  end
-
-  module Market_data = struct
+  module Market_data =
+  struct
 
     module Side =
     struct
@@ -622,7 +546,7 @@ module Websocket = struct
         ] [@@deriving sexp]
 
       let auction_event_to_yojson :
-        auction_event -> Yojson.Safe.json =
+        auction_event -> Yojson.Safe.json = fun _ ->
         failwith "auction_event_to_yojson: unsupported"
 
       let auction_event_of_yojson :
@@ -662,7 +586,8 @@ module Websocket = struct
         | `Auction of auction_event
         ] [@@deriving sexp]
 
-      let event_to_yojson = failwith "event_to_yojson: unsupported"
+      let event_to_yojson : event -> Yojson.Safe.json
+        = fun _ -> failwith "event_to_yojson: unsupported"
 
       let event_of_yojson :
         Yojson.Safe.json -> (event,string) Result.t = function
@@ -712,7 +637,7 @@ module Websocket = struct
         } [@@deriving sexp]
 
       let response_to_yojson : response -> Yojson.Safe.json =
-        failwith "response_to_yojson: unsupported"
+        fun _ -> failwith "response_to_yojson: unsupported"
 
       let response_of_yojson :
         Yojson.Safe.json -> (response, string) Result.t = function
@@ -760,10 +685,9 @@ module Websocket = struct
 
     end
     include T
-    include Subscribe(T)
+    include Ws.Make(T)
 
   end
-end
 let command : Command.t =
   Command.group
     ~summary:"Gemini Command System"
@@ -773,7 +697,7 @@ let command : Command.t =
      Mytrades.command;
      Tradevolume.command;
      Balances.command;
-     Websocket.Market_data.command
+     Market_data.command
     ]
 
 end

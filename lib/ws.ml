@@ -1,6 +1,3 @@
-
-module W = Websocket_async
-
 module type CHANNEL = sig
   val name : string
   val path : string list
@@ -9,24 +6,11 @@ module type CHANNEL = sig
 
 end
 
-
-(*module Response = struct
-
-  module type S = sig
-    type type_ [@@deriving sexp, enumerate]
-  end
-  type response =
-    { message_type : message_type [@key "type"];
-      socket_sequence: (int [@encoding `number)
-    } [@@deriving sexp, yojson]
-
-end *)
-
 module Make(Channel:CHANNEL) = struct
 let client (module Cfg : Cfg.S) protocol extensions =
   let uri = Uri.make
       ~host:Cfg.api_host
-      ~scheme:"wss"
+      ~scheme:"https"
       ~path:
         (String.concat ~sep:"/" Channel.path)
       ()
@@ -43,31 +27,30 @@ let client (module Cfg : Cfg.S) protocol extensions =
        Conduit_async_ssl.
          (ssl_connect (Ssl_config.configure ~version:Tlsv1_2 ()) r w)
      else return (r, w)) >>= fun (r, w) ->
-    let module C = Cohttp in
-    let extra_headers = C.Header.init () in
+    let extra_headers = Cohttp.Header.init () in
     let extra_headers = Option.value_map protocol ~default:extra_headers
         ~f:(fun proto ->
-            C.Header.add
+            Cohttp.Header.add
               extra_headers "Sec-Websocket-Protocol" proto)
     in
     let extra_headers = Option.value_map extensions ~default:extra_headers
         ~f:(fun exts ->
-            C.Header.add
+            Cohttp.Header.add
               extra_headers "Sec-Websocket-Extensions" exts)
     in
-    let r, w = W.client_ez
+    let r, w = Websocket_async.client_ez
         ~extra_headers
         ~log:Lazy.(force Log.Global.log)
         ~heartbeat:Time_ns.Span.(of_int_sec 5)
         uri s r w
-    in
-    Deferred.all_unit [
+    in (*
       (* TODO decide what to do with input pipe *)
       Pipe.transfer Reader.(pipe @@ Lazy.force stdin) w ~f:begin fun s ->
         String.chop_suffix_exn s ~suffix:"\n"
-      end;
-      Pipe.transfer r Writer.(pipe @@ Lazy.force stderr) ~f:(fun s -> s ^ "\n")
-    ]
+      end; *) return @@
+      Pipe.map r ~f:(fun s ->
+          Yojson.Safe.from_string s |> Channel.response_of_yojson)
+    (*]*)
   in
   let hostport = Host_and_port.create host port in
   Tcp.(with_connection Where_to_connect.(of_host_and_port hostport) tcp_fun)
@@ -87,9 +70,11 @@ let handle_client addr reader writer =
     | `Eof ->
       Log.Global.info "Client %s disconnected" addr_str;
       Deferred.unit
-    | `Ok ({ W.Frame.opcode; extension; final; content } as frame) ->
-      let open W.Frame in
-      Log.Global.debug "<- %s" W.Frame.(show frame);
+    | `Ok ({ Websocket_async.Frame.opcode;
+             extension; final; content } as frame
+          ) ->
+      let open Websocket_async.Frame in
+      Log.Global.debug "<- %s" (show frame);
       let frame', closed =
         match opcode with
         | Opcode.Ping -> Some (create ~opcode:Opcode.Pong ~content ()), false
@@ -117,7 +102,7 @@ let handle_client addr reader writer =
       else loop ()
   in
   Deferred.any [
-    begin W.server ~log:Lazy.(force Log.Global.log)
+    begin Websocket_async.server ~log:Lazy.(force Log.Global.log)
         ~check_request ~app_to_ws ~ws_to_app ~reader ~writer () >>= function
       | Error err when Error.to_exn err = Exit -> Deferred.unit
       | Error err -> Error.raise err
@@ -136,7 +121,6 @@ let command =
     +> flag "-extensions" (optional string)
       ~doc:"str websocket extensions header"
     +> flag "-loglevel" (optional int) ~doc:"1-3 loglevel"
-    +> flag "-s" no_arg ~doc:" Run as server (default: no)"
   in
   let set_loglevel = function
     | 2 -> Log.Global.set_level `Info
@@ -144,28 +128,27 @@ let command =
     | _ -> ()
   in
   let run cfg
-      protocol extension loglevel is_server () =
+      protocol extension loglevel () =
     let cfg = Cfg.get cfg in
     let module Cfg = (val cfg:Cfg.S) in
-    let uri = Uri.make
-      ~host:Cfg.api_host
-      ~scheme:"https"
-      ~path:
-        (String.concat ~sep:"/" Channel.path)
-      () in
     Option.iter loglevel ~f:set_loglevel;
-    match is_server with
-    | false -> client (module Cfg) protocol extension
-    | true ->
-      let port = Option.value_exn
-          ~message:"no port inferred from scheme"
-          Uri_services.(tcp_port_of_uri uri) in
-      Tcp.(Server.create
-             ~on_handler_error:`Ignore
-             Where_to_listen.(of_port port) handle_client) >>=
-      Tcp.Server.close_finished
+    client (module Cfg) protocol extension >>=
+    Pipe.iter ~f:
+      (function 
+        | Result.Ok response ->
+          Channel.sexp_of_response response |>
+          Sexp.to_string_hum |> fun s ->
+          Log.Global.info "market data: %s" s;
+          Deferred.unit
+        | Result.Error e ->
+          Log.Global.error "market data deserialization error: %s"
+            e;
+          Deferred.unit
+      )
+
   in
+  Channel.name,
   Command.async_spec
-    ~summary:"Gemini %s Websocket" spec run
+    ~summary:(sprintf "Gemini %s Websocket Command" Channel.name) spec run
 end
 
