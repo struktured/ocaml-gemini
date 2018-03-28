@@ -2,17 +2,24 @@ module type CHANNEL = sig
   val name : string
   val path : string list
 
+  type uri_args [@@deriving sexp, enumerate]
+  val uri_args_to_string : uri_args -> string
   type response [@@deriving sexp, yojson]
 
 end
 
 module Make(Channel:CHANNEL) = struct
-let client (module Cfg : Cfg.S) protocol extensions =
+let client (module Cfg : Cfg.S) protocol extensions uri_args =
   let uri = Uri.make
       ~host:Cfg.api_host
       ~scheme:"https"
       ~path:
-        (String.concat ~sep:"/" Channel.path)
+        (String.concat ~sep:"/"
+           (Channel.path
+            @
+            [(Channel.uri_args_to_string uri_args)]
+           )
+        )
       ()
       in
   Log.Global.info "Ws.client: uri=%s"
@@ -132,6 +139,7 @@ let command =
     +> flag "-extensions" (optional string)
       ~doc:"str websocket extensions header"
     +> flag "-loglevel" (optional int) ~doc:"1-3 loglevel"
+    +> anon ("uri_args" %: sexp)
   in
   let set_loglevel = function
     | 2 -> Log.Global.set_level `Info
@@ -139,11 +147,12 @@ let command =
     | _ -> ()
   in
   let run cfg
-      protocol extension loglevel () =
+      protocol extension loglevel uri_args () =
     let cfg = Cfg.get cfg in
     let module Cfg = (val cfg:Cfg.S) in
     Option.iter loglevel ~f:set_loglevel;
-    client (module Cfg) protocol extension >>= fun _ -> Deferred.unit
+    let uri_args = Channel.uri_args_of_sexp uri_args in
+    client (module Cfg) protocol extension uri_args >>= fun _ -> Deferred.unit
   in
   Channel.name,
   Command.async_spec

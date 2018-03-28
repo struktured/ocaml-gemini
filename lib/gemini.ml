@@ -416,8 +416,9 @@ end
 
     module T = struct
       let name = "marketdata"
-      let path = path@["marketdata";"ethusd"]
-      type uri_path = Symbol.t [@@deriving sexp, yojson]
+      let path = path@["marketdata"]
+      type uri_args = Symbol.t [@@deriving sexp, yojson, enumerate]
+      let uri_args_to_string = Symbol.to_string
       type request =
         { heartbeat : bool option [@default None] } [@@deriving sexp, yojson]
 
