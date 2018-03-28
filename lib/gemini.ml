@@ -55,10 +55,12 @@ module Timestamp = struct
        Time.of_span_since_epoch |>
        fun ok -> Result.Ok ok
 
-  let ms_of_yojson (ms:Yojson.Safe.json) = of_yojson Time.Span.of_ms ms
+  let ms_of_yojson (ms:Yojson.Safe.json) =
+    of_yojson Time.Span.of_ms ms
   let ms_to_yojson (ms:ms) = to_yojson ms
 
-  let sec_of_yojson (sec:Yojson.Safe.json) = of_yojson Time.Span.of_sec sec
+  let sec_of_yojson (sec:Yojson.Safe.json) =
+    of_yojson Time.Span.of_sec sec
   let sec_to_yojson (sec:sec) = to_yojson sec
 
 
@@ -609,8 +611,6 @@ end
                   change_event_of_yojson json' |>
                   Result.map ~f:(fun event -> `Change event)
                 | `Trade ->
-                  Log.Global.info "trade_event_of_yojson: %s"
-                    (Yojson.Safe.to_string json');
                   trade_event_of_yojson json' |>
                   Result.map ~f:(fun event -> `Trade event)
                 | `Auction ->
