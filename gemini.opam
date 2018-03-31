@@ -14,8 +14,12 @@ depends: [
   "jbuilder" {build}
   "ppx_jane"
   "uri"
+  "hex"
   "yojson"
   "zarith"
+  "nocrypto"
+  "ppx_deriving_yojson"
+  "ppx_deriving_yojson.runtime"
 ]
 
 available: [
