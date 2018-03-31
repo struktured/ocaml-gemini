@@ -166,6 +166,7 @@ struct
       } [@@deriving yojson, sexp]
 
       type response = {
+        client_order_id : string option [@default None];
         order_id : int_string;
         id : int_string;
         symbol : Symbol.t;
