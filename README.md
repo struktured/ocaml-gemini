@@ -1,6 +1,6 @@
 # Introduction
 
-This library implements the Gemini v1 REST and Market Data web sockets
+This library implements the Gemini exchange v1 REST and Market Data web sockets
 services. It is backed by cohttp-async and websockets-async to do the heavy
 lifting. A provisional console interface is also provided using s-expressions to
 encode request parameters.
