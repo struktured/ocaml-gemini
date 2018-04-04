@@ -147,7 +147,17 @@ module Response = struct
 
 end
 
-module Post(Operation:Operation.S) =
+module Post(Operation:Operation.S) :
+  sig
+    val post :
+      (module Cfg.S) ->
+      Nonce.reader ->
+      Operation.request ->
+      [
+      | `Ok of Operation.response
+      | Error.post
+      ] Deferred.t
+  end =
 struct
   let post
       (module Cfg : Cfg.S)
