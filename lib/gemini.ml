@@ -34,7 +34,7 @@ module Timestamp = struct
     Float.to_string_hum ~decimals:0 |>
     fun s -> `String s
 
-  let of_yojson span_fn json =
+  let of_yojson' span_fn json =
     (match json with
     | `String s ->
       `Ok (Float.of_string s)
@@ -55,14 +55,17 @@ module Timestamp = struct
        Time.of_span_since_epoch |>
        fun ok -> Result.Ok ok
 
-  let ms_of_yojson (ms:Yojson.Safe.json) =
-    of_yojson Time.Span.of_ms ms
+
+  let of_yojson (ms:Yojson.Safe.json) =
+    of_yojson' Time.Span.of_ms ms
+
+  let ms_of_yojson = of_yojson
+
   let ms_to_yojson (ms:ms) = to_yojson ms
 
   let sec_of_yojson (sec:Yojson.Safe.json) =
-    of_yojson Time.Span.of_sec sec
+    of_yojson' Time.Span.of_sec sec
   let sec_to_yojson (sec:sec) = to_yojson sec
-
 
 end
 
