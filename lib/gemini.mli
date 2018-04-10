@@ -68,17 +68,10 @@ module V1 : sig
       val path : string list
       module Status :
         sig
-          module T :
-            sig
               val name : string
               val path : string list
-              type request = { order_id : int_number; }
-              val request_to_yojson : request -> Yojson.Safe.json
-              val request_of_yojson :
-                Yojson.Safe.json ->
-                request Ppx_deriving_yojson_runtime.error_or
-              val request_of_sexp : Sexplib.Sexp.t -> request
-              val sexp_of_request : request -> Sexplib.Sexp.t
+              type request =
+                { order_id : int_number; } [@@deriving sexp, yojson]
               type response = {
                 client_order_id : string option;
                 order_id : int_string;
@@ -99,95 +92,25 @@ module V1 : sig
                 options : Order_execution_option.t list;
                 price : decimal_string;
                 original_amount : decimal_string;
-              }
-              val response_to_yojson : response -> Yojson.Safe.json
-              val response_of_yojson :
-                Yojson.Safe.json ->
-                response Ppx_deriving_yojson_runtime.error_or
-              val response_of_sexp : Sexplib.Sexp.t -> response
-              val sexp_of_response : response -> Sexplib.Sexp.t
-            end
-          val name : string
-          val path : string list
-          type request = T.request = { order_id : int_number; }
-          val request_to_yojson : request -> Yojson.Safe.json
-          val request_of_yojson :
-            Yojson.Safe.json -> request Ppx_deriving_yojson_runtime.error_or
-          val request_of_sexp : Sexplib.Sexp.t -> request
-          val sexp_of_request : request -> Sexplib.Sexp.t
-          type response =
-            T.response = {
-            client_order_id : string option;
-            order_id : int_string;
-            id : int_string;
-            symbol : Symbol.t;
-            exchange : Exchange.t;
-            avg_execution_price : decimal_string;
-            side : Side.t;
-            type_ : Order_type.t;
-            timestamp : Timestamp.sec;
-            timestampms : Timestamp.ms;
-            is_live : bool;
-            is_cancelled : bool;
-            is_hidden : bool;
-            was_forced : bool;
-            executed_amount : decimal_string;
-            remaining_amount : decimal_string;
-            options : Order_execution_option.t list;
-            price : decimal_string;
-            original_amount : decimal_string;
-          }
-          val response_to_yojson : response -> Yojson.Safe.json
-          val response_of_yojson :
-            Yojson.Safe.json -> response Ppx_deriving_yojson_runtime.error_or
-          val response_of_sexp : Sexplib.Sexp.t -> response
-          val sexp_of_response : response -> Sexplib.Sexp.t
+              } [@@deriving sexp, yojson]
           val post :
-            (module Gemini__.Cfg.S) ->
-            Gemini__.Nonce.reader ->
-            T.request ->
+            (module Cfg.S) ->
+            Nonce.reader ->
+            request ->
             [ `Bad_request of string
-            | `Error of Gemini__Rest.Error.detail
-            | `Json_parse_error of Gemini__Rest.Error.json_error
+            | `Error of Rest.Error.detail
+            | `Json_parse_error of Rest.Error.json_error
             | `Not_acceptable of string
             | `Not_found
-            | `Ok of T.response
+            | `Ok of response
             | `Unauthorized of string ] Async.Deferred.t
           val command : string * Async.Command.t
         end
       module New :
         sig
-          module T :
-            sig
-              val name : string
-              val path : string list
-              type request = {
-                client_order_id : string;
-                symbol : Symbol.t;
-                amount : decimal_string;
-                price : decimal_string;
-                side : Side.t;
-                type_ : Order_type.t;
-                options : Order_execution_option.t list;
-              }
-              val request_to_yojson : request -> Yojson.Safe.json
-              val request_of_yojson :
-                Yojson.Safe.json ->
-                request Ppx_deriving_yojson_runtime.error_or
-              val request_of_sexp : Sexplib.Sexp.t -> request
-              val sexp_of_request : request -> Sexplib.Sexp.t
-              type response = Status.response
-              val response_to_yojson : response -> Yojson.Safe.json
-              val response_of_yojson :
-                Yojson.Safe.json ->
-                response Ppx_deriving_yojson_runtime.error_or
-              val response_of_sexp : Sexplib.Sexp.t -> response
-              val sexp_of_response : response -> Sexplib.Sexp.t
-            end
           val name : string
           val path : string list
-          type request =
-            T.request = {
+          type request = {
             client_order_id : string;
             symbol : Symbol.t;
             amount : decimal_string;
@@ -195,28 +118,18 @@ module V1 : sig
             side : Side.t;
             type_ : Order_type.t;
             options : Order_execution_option.t list;
-          }
-          val request_to_yojson : request -> Yojson.Safe.json
-          val request_of_yojson :
-            Yojson.Safe.json -> request Ppx_deriving_yojson_runtime.error_or
-          val request_of_sexp : Sexplib.Sexp.t -> request
-          val sexp_of_request : request -> Sexplib.Sexp.t
-          type response = Status.response
-          val response_to_yojson : response -> Yojson.Safe.json
-          val response_of_yojson :
-            Yojson.Safe.json -> response Ppx_deriving_yojson_runtime.error_or
-          val response_of_sexp : Sexplib.Sexp.t -> response
-          val sexp_of_response : response -> Sexplib.Sexp.t
+          } [@@deriving sexp, yojson]
+          type response = Status.response [@@deriving sexp, yojson]
           val post :
-            (module Gemini__.Cfg.S) ->
-            Gemini__.Nonce.reader ->
-            T.request ->
+            (module Cfg.S) ->
+            Nonce.reader ->
+            request ->
             [ `Bad_request of string
-            | `Error of Gemini__Rest.Error.detail
-            | `Json_parse_error of Gemini__Rest.Error.json_error
+            | `Error of Rest.Error.detail
+            | `Json_parse_error of Rest.Error.json_error
             | `Not_acceptable of string
             | `Not_found
-            | `Ok of T.response
+            | `Ok of response
             | `Unauthorized of string ] Async.Deferred.t
           val command : string * Async.Command.t
         end
@@ -226,51 +139,21 @@ module V1 : sig
           val path : string list
           module By_order_id :
             sig
-              module T :
-                sig
-                  val name : string
-                  val path : string list
-                  type request = { order_id : int_string; }
-                  val request_to_yojson : request -> Yojson.Safe.json
-                  val request_of_yojson :
-                    Yojson.Safe.json ->
-                    request Ppx_deriving_yojson_runtime.error_or
-                  val request_of_sexp : Sexplib.Sexp.t -> request
-                  val sexp_of_request : request -> Sexplib.Sexp.t
-                  type response = Status.response
-                  val response_to_yojson : response -> Yojson.Safe.json
-                  val response_of_yojson :
-                    Yojson.Safe.json ->
-                    response Ppx_deriving_yojson_runtime.error_or
-                  val response_of_sexp : Sexplib.Sexp.t -> response
-                  val sexp_of_response : response -> Sexplib.Sexp.t
-                end
               val name : string
               val path : string list
-              type request = T.request = { order_id : int_string; }
-              val request_to_yojson : request -> Yojson.Safe.json
-              val request_of_yojson :
-                Yojson.Safe.json ->
-                request Ppx_deriving_yojson_runtime.error_or
-              val request_of_sexp : Sexplib.Sexp.t -> request
-              val sexp_of_request : request -> Sexplib.Sexp.t
-              type response = Status.response
-              val response_to_yojson : response -> Yojson.Safe.json
-              val response_of_yojson :
-                Yojson.Safe.json ->
-                response Ppx_deriving_yojson_runtime.error_or
-              val response_of_sexp : Sexplib.Sexp.t -> response
-              val sexp_of_response : response -> Sexplib.Sexp.t
+              type request =
+                { order_id : int_string; } [@@deriving sexp, yojson]
+              type response = Status.response [@@deriving sexp, yojson]
               val post :
-                (module Gemini__.Cfg.S) ->
-                Gemini__.Nonce.reader ->
-                T.request ->
+                (module Cfg.S) ->
+                Nonce.reader ->
+                request ->
                 [ `Bad_request of string
-                | `Error of Gemini__Rest.Error.detail
-                | `Json_parse_error of Gemini__Rest.Error.json_error
+                | `Error of Rest.Error.detail
+                | `Json_parse_error of Rest.Error.json_error
                 | `Not_acceptable of string
                 | `Not_found
-                | `Ok of T.response
+                | `Ok of response
                 | `Unauthorized of string ] Async.Deferred.t
               val command : string * Async.Command.t
             end
@@ -285,51 +168,21 @@ module V1 : sig
           val sexp_of_details : details -> Sexplib.Sexp.t
           module All :
             sig
-              module T :
-                sig
-                  val name : string
-                  val path : string list
-                  type request = unit
-                  val request_to_yojson : request -> Yojson.Safe.json
-                  val request_of_yojson :
-                    Yojson.Safe.json ->
-                    request Ppx_deriving_yojson_runtime.error_or
-                  val request_of_sexp : Sexplib.Sexp.t -> request
-                  val sexp_of_request : request -> Sexplib.Sexp.t
-                  type response = { details : details; }
-                  val response_to_yojson : response -> Yojson.Safe.json
-                  val response_of_yojson :
-                    Yojson.Safe.json ->
-                    response Ppx_deriving_yojson_runtime.error_or
-                  val response_of_sexp : Sexplib.Sexp.t -> response
-                  val sexp_of_response : response -> Sexplib.Sexp.t
-                end
               val name : string
               val path : string list
-              type request = unit
-              val request_to_yojson : request -> Yojson.Safe.json
-              val request_of_yojson :
-                Yojson.Safe.json ->
-                request Ppx_deriving_yojson_runtime.error_or
-              val request_of_sexp : Sexplib.Sexp.t -> request
-              val sexp_of_request : request -> Sexplib.Sexp.t
-              type response = T.response = { details : details; }
-              val response_to_yojson : response -> Yojson.Safe.json
-              val response_of_yojson :
-                Yojson.Safe.json ->
-                response Ppx_deriving_yojson_runtime.error_or
-              val response_of_sexp : Sexplib.Sexp.t -> response
-              val sexp_of_response : response -> Sexplib.Sexp.t
+              type request = unit [@@deriving sexp, yojson]
+              type response =
+                { details : details; } [@@deriving sexp, yojson]
               val post :
-                (module Gemini__.Cfg.S) ->
-                Gemini__.Nonce.reader ->
-                T.request ->
+                (module Cfg.S) ->
+                Nonce.reader ->
+                request ->
                 [ `Bad_request of string
-                | `Error of Gemini__Rest.Error.detail
-                | `Json_parse_error of Gemini__Rest.Error.json_error
+                | `Error of Rest.Error.detail
+                | `Json_parse_error of Rest.Error.json_error
                 | `Not_acceptable of string
                 | `Not_found
-                | `Ok of T.response
+                | `Ok of response
                 | `Unauthorized of string ] Async.Deferred.t
               val command : string * Async.Command.t
             end
@@ -371,12 +224,12 @@ module V1 : sig
               val response_of_sexp : Sexplib.Sexp.t -> response
               val sexp_of_response : response -> Sexplib.Sexp.t
               val post :
-                (module Gemini__.Cfg.S) ->
-                Gemini__.Nonce.reader ->
+                (module Cfg.S) ->
+                Nonce.reader ->
                 T.request ->
                 [ `Bad_request of string
-                | `Error of Gemini__Rest.Error.detail
-                | `Json_parse_error of Gemini__Rest.Error.json_error
+                | `Error of Rest.Error.detail
+                | `Json_parse_error of Rest.Error.json_error
                 | `Not_acceptable of string
                 | `Not_found
                 | `Ok of T.response
@@ -421,12 +274,12 @@ module V1 : sig
       val response_of_sexp : Sexplib.Sexp.t -> response
       val sexp_of_response : response -> Sexplib.Sexp.t
       val post :
-        (module Gemini__.Cfg.S) ->
-        Gemini__.Nonce.reader ->
+        (module Cfg.S) ->
+        Nonce.reader ->
         T.request ->
         [ `Bad_request of string
-        | `Error of Gemini__Rest.Error.detail
-        | `Json_parse_error of Gemini__Rest.Error.json_error
+        | `Error of Rest.Error.detail
+        | `Json_parse_error of Rest.Error.json_error
         | `Not_acceptable of string
         | `Not_found
         | `Ok of T.response
@@ -496,12 +349,12 @@ module V1 : sig
       val response_of_sexp : Sexplib.Sexp.t -> response
       val sexp_of_response : response -> Sexplib.Sexp.t
       val post :
-        (module Gemini__.Cfg.S) ->
-        Gemini__.Nonce.reader ->
+        (module Cfg.S) ->
+        Nonce.reader ->
         T.request ->
         [ `Bad_request of string
-        | `Error of Gemini__Rest.Error.detail
-        | `Json_parse_error of Gemini__Rest.Error.json_error
+        | `Error of Rest.Error.detail
+        | `Json_parse_error of Rest.Error.json_error
         | `Not_acceptable of string
         | `Not_found
         | `Ok of T.response
@@ -568,12 +421,12 @@ module V1 : sig
       val response_of_sexp : Sexplib.Sexp.t -> response
       val sexp_of_response : response -> Sexplib.Sexp.t
       val post :
-        (module Gemini__.Cfg.S) ->
-        Gemini__.Nonce.reader ->
+        (module Cfg.S) ->
+        Nonce.reader ->
         T.request ->
         [ `Bad_request of string
-        | `Error of Gemini__Rest.Error.detail
-        | `Json_parse_error of Gemini__Rest.Error.json_error
+        | `Error of Rest.Error.detail
+        | `Json_parse_error of Rest.Error.json_error
         | `Not_acceptable of string
         | `Not_found
         | `Ok of T.response
@@ -639,12 +492,12 @@ module V1 : sig
       val response_of_sexp : Sexplib.Sexp.t -> response
       val sexp_of_response : response -> Sexplib.Sexp.t
       val post :
-        (module Gemini__.Cfg.S) ->
-        Gemini__.Nonce.reader ->
+        (module Cfg.S) ->
+        Nonce.reader ->
         T.request ->
         [ `Bad_request of string
-        | `Error of Gemini__Rest.Error.detail
-        | `Json_parse_error of Gemini__Rest.Error.json_error
+        | `Error of Rest.Error.detail
+        | `Json_parse_error of Rest.Error.json_error
         | `Not_acceptable of string
         | `Not_found
         | `Ok of T.response
@@ -1147,7 +1000,7 @@ module V1 : sig
       val response_of_yojson :
         Yojson.Safe.json -> (response, string) Result.t
       val client :
-        (module Gemini__.Cfg.S) ->
+        (module Cfg.S) ->
         string Core.Option.t ->
         string Core.Option.t ->
         T.uri_args -> (unit * unit) Async_extra__.Import.Deferred.t
