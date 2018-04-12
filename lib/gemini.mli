@@ -97,13 +97,10 @@ module V1 : sig
           (module Cfg.S) ->
           Nonce.reader ->
           request ->
-          [ `Bad_request of string
-          | `Error of Rest.Error.detail
-          | `Json_parse_error of Rest.Error.json_error
-          | `Not_acceptable of string
-          | `Not_found
-          | `Ok of response
-          | `Unauthorized of string ] Deferred.t
+          [
+            | Rest.Error.post
+            | `Ok of response
+          ] Deferred.t
         val command : string * Command.t
       end
       module New :
@@ -124,13 +121,9 @@ module V1 : sig
             (module Cfg.S) ->
             Nonce.reader ->
             request ->
-            [ `Bad_request of string
-            | `Error of Rest.Error.detail
-            | `Json_parse_error of Rest.Error.json_error
-            | `Not_acceptable of string
-            | `Not_found
-            | `Ok of response
-            | `Unauthorized of string
+            [
+              | Rest.Error.post
+              | `Ok of response
             ] Deferred.t
           val command : string * Command.t
         end
@@ -149,13 +142,10 @@ module V1 : sig
                 (module Cfg.S) ->
                 Nonce.reader ->
                 request ->
-                [ `Bad_request of string
-                | `Error of Rest.Error.detail
-                | `Json_parse_error of Rest.Error.json_error
-                | `Not_acceptable of string
-                | `Not_found
-                | `Ok of response
-                | `Unauthorized of string ] Deferred.t
+                [
+                  | Rest.Error.post
+                  | `Ok of response
+                ] Deferred.t
               val command : string * Command.t
             end
           type details = {
@@ -173,13 +163,10 @@ module V1 : sig
                 (module Cfg.S) ->
                 Nonce.reader ->
                 request ->
-                [ `Bad_request of string
-                | `Error of Rest.Error.detail
-                | `Json_parse_error of Rest.Error.json_error
-                | `Not_acceptable of string
-                | `Not_found
-                | `Ok of response
-                | `Unauthorized of string ] Deferred.t
+                [
+                  | Rest.Error.post
+                  | `Ok of response
+                ] Deferred.t
               val command : string * Command.t
             end
           module Session :
@@ -192,13 +179,10 @@ module V1 : sig
                 (module Cfg.S) ->
                 Nonce.reader ->
                 request ->
-                [ `Bad_request of string
-                | `Error of Rest.Error.detail
-                | `Json_parse_error of Rest.Error.json_error
-                | `Not_acceptable of string
-                | `Not_found
-                | `Ok of response
-                | `Unauthorized of string ] Deferred.t
+                [
+                  | Rest.Error.post
+                  | `Ok of response
+                ] Deferred.t
               val command : string * Command.t
             end
           val command : string * Command.t
@@ -215,13 +199,10 @@ module V1 : sig
         (module Cfg.S) ->
         Nonce.reader ->
         request ->
-        [ `Bad_request of string
-        | `Error of Rest.Error.detail
-        | `Json_parse_error of Rest.Error.json_error
-        | `Not_acceptable of string
-        | `Not_found
-        | `Ok of response
-        | `Unauthorized of string ] Deferred.t
+        [
+          | Rest.Error.post
+          | `Ok of response
+        ] Deferred.t
       val command : string * Command.t
     end
   module Mytrades :
@@ -253,13 +234,10 @@ module V1 : sig
         (module Cfg.S) ->
         Nonce.reader ->
         request ->
-        [ `Bad_request of string
-        | `Error of Rest.Error.detail
-        | `Json_parse_error of Rest.Error.json_error
-        | `Not_acceptable of string
-        | `Not_found
-        | `Ok of response
-        | `Unauthorized of string ] Deferred.t
+        [
+          | Rest.Error.post
+          | `Ok of response
+        ] Deferred.t
       val command : string * Command.t
     end
   module Tradevolume :
@@ -293,13 +271,10 @@ module V1 : sig
         (module Cfg.S) ->
         Nonce.reader ->
         request ->
-        [ `Bad_request of string
-        | `Error of Rest.Error.detail
-        | `Json_parse_error of Rest.Error.json_error
-        | `Not_acceptable of string
-        | `Not_found
-        | `Ok of response
-        | `Unauthorized of string ] Deferred.t
+        [
+          | Rest.Error.post
+          | `Ok of response
+        ] Deferred.t
       val command : string * Command.t
     end
   module Balances :
@@ -320,13 +295,10 @@ module V1 : sig
         (module Cfg.S) ->
         Nonce.reader ->
         request ->
-        [ `Bad_request of string
-        | `Error of Rest.Error.detail
-        | `Json_parse_error of Rest.Error.json_error
-        | `Not_acceptable of string
-        | `Not_found
-        | `Ok of response
-        | `Unauthorized of string ] Deferred.t
+        [
+          | Rest.Error.post
+          | `Ok of response
+        ] Deferred.t
       val command : string * Command.t
     end
   module Market_data :
