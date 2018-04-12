@@ -9,7 +9,7 @@ module type CHANNEL = sig
 end
 
 module Make(Channel:CHANNEL) = struct
-let client (module Cfg : Cfg.S) protocol extensions uri_args =
+let client (module Cfg : Cfg.S) ?protocol ?extensions uri_args =
   let uri = Uri.make
       ~host:Cfg.api_host
       ~scheme:"https"
@@ -147,12 +147,13 @@ let command =
     | _ -> ()
   in
   let run cfg
-      protocol extension loglevel uri_args () =
+      protocol extensions loglevel uri_args () =
     let cfg = Cfg.get cfg in
     let module Cfg = (val cfg:Cfg.S) in
     Option.iter loglevel ~f:set_loglevel;
     let uri_args = Channel.uri_args_of_sexp uri_args in
-    client (module Cfg) protocol extension uri_args >>= fun _ -> Deferred.unit
+    client (module Cfg) ?protocol ?extensions uri_args >>= fun _ ->
+    Deferred.unit
   in
   Channel.name,
   Command.async_spec

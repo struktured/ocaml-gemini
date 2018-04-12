@@ -341,351 +341,73 @@ module V1 : sig
           module Auction :
             sig
               type t = [ `Auction ] [@@deriving sexp, enumerate, yojson]
-              val to_string : [< `Auction ] -> string
+              val to_string : [< t ] -> string
             end
-          type t = [ `Ask | `Auction | `Bid ] [@@deriving sexp, enumerate, yojson]
+
+          type t = [ `Ask | `Auction | `Bid ]
+          [@@deriving sexp, enumerate, yojson]
+
           val to_string : [< t ] -> string
-        end
-      module T :
-        sig
-          val name : string
-          val path : string list
-          type uri_args = Symbol.t
-          val uri_args_to_yojson : uri_args -> Yojson.Safe.json
-          val uri_args_of_yojson :
-            Yojson.Safe.json -> uri_args Ppx_deriving_yojson_runtime.error_or
-          val uri_args_of_sexp : Sexplib.Sexp.t -> uri_args
-          val sexp_of_uri_args : uri_args -> Sexplib.Sexp.t
-          val all_of_uri_args : uri_args list
-          val uri_args_to_string : [< `Btcusd | `Ethbtc | `Ethusd ] -> string
-          type request = { heartbeat : bool option; }
-          val request_to_yojson : request -> Yojson.Safe.json
-          val request_of_yojson :
-            Yojson.Safe.json -> request Ppx_deriving_yojson_runtime.error_or
-          val request_of_sexp : Sexplib.Sexp.t -> request
-          val sexp_of_request : request -> Sexplib.Sexp.t
-          module Message_type :
-            sig
-              module T :
-                sig
-                  type t = [ `Heartbeat | `Update ]
-                  val __t_of_sexp__ : Sexplib.Sexp.t -> t
-                  val t_of_sexp : Sexplib.Sexp.t -> t
-                  val sexp_of_t : t -> Sexplib.Sexp.t
-                  val all : t list
-                  val to_string : [< `Heartbeat | `Update ] -> string
-                end
-              type t = [ `Heartbeat | `Update ]
-              val __t_of_sexp__ : Sexplib.Sexp.t -> t
-              val t_of_sexp : Sexplib.Sexp.t -> t
-              val sexp_of_t : t -> Sexplib.Sexp.t
-              val all : t list
-              val to_string : [< `Heartbeat | `Update ] -> string
-              val dict : (string * T.t) Core.List.t
-              val of_string : string -> T.t option
-              val to_yojson : T.t -> [> `String of string ]
-              val of_yojson :
-                Yojson.Safe.json -> (T.t, string) Gemini__Json.Result.t
-            end
-          module Event_type :
-            sig
-              module T :
-                sig
-                  type t = [ `Auction | `Change | `Trade ]
-                  val __t_of_sexp__ : Sexplib.Sexp.t -> t
-                  val t_of_sexp : Sexplib.Sexp.t -> t
-                  val sexp_of_t : t -> Sexplib.Sexp.t
-                  val all : t list
-                  val to_string : [< `Auction | `Change | `Trade ] -> string
-                end
-              type t = [ `Auction | `Change | `Trade ]
-              val __t_of_sexp__ : Sexplib.Sexp.t -> t
-              val t_of_sexp : Sexplib.Sexp.t -> t
-              val sexp_of_t : t -> Sexplib.Sexp.t
-              val all : t list
-              val to_string : [< `Auction | `Change | `Trade ] -> string
-              val dict : (string * T.t) Core.List.t
-              val of_string : string -> T.t option
-              val to_yojson : T.t -> [> `String of string ]
-              val of_yojson :
-                Yojson.Safe.json -> (T.t, string) Gemini__Json.Result.t
-            end
-          type heartbeat = unit
-          val heartbeat_to_yojson : heartbeat -> Yojson.Safe.json
-          val heartbeat_of_yojson :
-            Yojson.Safe.json ->
-            heartbeat Ppx_deriving_yojson_runtime.error_or
-          val heartbeat_of_sexp : Sexplib.Sexp.t -> heartbeat
-          val sexp_of_heartbeat : heartbeat -> Sexplib.Sexp.t
-          module Reason :
-            sig
-              module T :
-                sig
-                  type t = [ `Cancel | `Initial | `Place | `Trade ]
-                  val __t_of_sexp__ : Sexplib.Sexp.t -> t
-                  val t_of_sexp : Sexplib.Sexp.t -> t
-                  val sexp_of_t : t -> Sexplib.Sexp.t
-                  val all : t list
-                  val to_string :
-                    [< `Cancel | `Initial | `Place | `Trade ] -> string
-                end
-              type t = [ `Cancel | `Initial | `Place | `Trade ]
-              val __t_of_sexp__ : Sexplib.Sexp.t -> t
-              val t_of_sexp : Sexplib.Sexp.t -> t
-              val sexp_of_t : t -> Sexplib.Sexp.t
-              val all : t list
-              val to_string :
-                [< `Cancel | `Initial | `Place | `Trade ] -> string
-              val dict : (string * T.t) Core.List.t
-              val of_string : string -> T.t option
-              val to_yojson : T.t -> [> `String of string ]
-              val of_yojson :
-                Yojson.Safe.json -> (T.t, string) Gemini__Json.Result.t
-            end
-          type change_event = {
-            price : decimal_string;
-            side : Side.Bid_ask.t;
-            reason : Reason.t;
-            remaining : decimal_string;
-            delta : decimal_string;
-          }
-          val change_event_to_yojson : change_event -> Yojson.Safe.json
-          val change_event_of_yojson :
-            Yojson.Safe.json ->
-            change_event Ppx_deriving_yojson_runtime.error_or
-          val change_event_of_sexp : Sexplib.Sexp.t -> change_event
-          val sexp_of_change_event : change_event -> Sexplib.Sexp.t
-          type trade_event = {
-            tid : int_number;
-            price : decimal_string;
-            amount : decimal_string;
-            maker_side : Side.t;
-          }
-          val trade_event_to_yojson : trade_event -> Yojson.Safe.json
-          val trade_event_of_yojson :
-            Yojson.Safe.json ->
-            trade_event Ppx_deriving_yojson_runtime.error_or
-          val trade_event_of_sexp : Sexplib.Sexp.t -> trade_event
-          val sexp_of_trade_event : trade_event -> Sexplib.Sexp.t
-          type auction_open_event = {
-            auction_open_ms : Timestamp.ms;
-            auction_time_ms : Timestamp.ms;
-            first_indicative_ms : Timestamp.ms;
-            last_cancel_time_ms : Timestamp.ms;
-          }
-          val auction_open_event_to_yojson :
-            auction_open_event -> Yojson.Safe.json
-          val auction_open_event_of_yojson :
-            Yojson.Safe.json ->
-            auction_open_event Ppx_deriving_yojson_runtime.error_or
-          val auction_open_event_of_sexp :
-            Sexplib.Sexp.t -> auction_open_event
-          val sexp_of_auction_open_event :
-            auction_open_event -> Sexplib.Sexp.t
-          module Auction_result :
-            sig
-              module T :
-                sig
-                  type t = [ `Failure | `Success ]
-                  val __t_of_sexp__ : Sexplib.Sexp.t -> t
-                  val t_of_sexp : Sexplib.Sexp.t -> t
-                  val sexp_of_t : t -> Sexplib.Sexp.t
-                  val all : t list
-                  val to_string : [< `Failure | `Success ] -> string
-                end
-              type t = [ `Failure | `Success ]
-              val __t_of_sexp__ : Sexplib.Sexp.t -> t
-              val t_of_sexp : Sexplib.Sexp.t -> t
-              val sexp_of_t : t -> Sexplib.Sexp.t
-              val all : t list
-              val to_string : [< `Failure | `Success ] -> string
-              val dict : (string * T.t) Core.List.t
-              val of_string : string -> T.t option
-              val to_yojson : T.t -> [> `String of string ]
-              val of_yojson :
-                Yojson.Safe.json -> (T.t, string) Gemini__Json.Result.t
-            end
-          type auction_indicative_price_event = {
-            eid : int_number;
-            result : Auction_result.t;
-            time_ms : Timestamp.ms;
-            highest_bid_price : decimal_string;
-            lowest_ask_price : decimal_string;
-            collar_price : decimal_string;
-            indicative_price : decimal_string;
-            indicative_quantity : decimal_string;
-          }
-          val auction_indicative_price_event_to_yojson :
-            auction_indicative_price_event -> Yojson.Safe.json
-          val auction_indicative_price_event_of_yojson :
-            Yojson.Safe.json ->
-            auction_indicative_price_event
-            Ppx_deriving_yojson_runtime.error_or
-          val auction_indicative_price_event_of_sexp :
-            Sexplib.Sexp.t -> auction_indicative_price_event
-          val sexp_of_auction_indicative_price_event :
-            auction_indicative_price_event -> Sexplib.Sexp.t
-          type auction_outcome_event = {
-            eid : int_number;
-            result : Auction_result.t;
-            time_ms : Timestamp.ms;
-            highest_bid_price : decimal_string;
-            lowest_ask_price : decimal_string;
-            collar_price : decimal_string;
-            auction_price : decimal_string;
-            auction_quantity : decimal_string;
-          }
-          val auction_outcome_event_to_yojson :
-            auction_outcome_event -> Yojson.Safe.json
-          val auction_outcome_event_of_yojson :
-            Yojson.Safe.json ->
-            auction_outcome_event Ppx_deriving_yojson_runtime.error_or
-          val auction_outcome_event_of_sexp :
-            Sexplib.Sexp.t -> auction_outcome_event
-          val sexp_of_auction_outcome_event :
-            auction_outcome_event -> Sexplib.Sexp.t
-          module Auction_event_type :
-            sig
-              module T :
-                sig
-                  type t =
-                      [ `Auction_indicative_price
-                      | `Auction_open
-                      | `Auction_outcome ]
-                  val __t_of_sexp__ : Sexplib.Sexp.t -> t
-                  val t_of_sexp : Sexplib.Sexp.t -> t
-                  val sexp_of_t : t -> Sexplib.Sexp.t
-                  val all : t list
-                  val to_string :
-                    [< `Auction_indicative_price
-                     | `Auction_open
-                     | `Auction_outcome ] ->
-                    string
-                end
-              type t =
-                  [ `Auction_indicative_price
-                  | `Auction_open
-                  | `Auction_outcome ]
-              val __t_of_sexp__ : Sexplib.Sexp.t -> t
-              val t_of_sexp : Sexplib.Sexp.t -> t
-              val sexp_of_t : t -> Sexplib.Sexp.t
-              val all : t list
-              val to_string :
-                [< `Auction_indicative_price
-                 | `Auction_open
-                 | `Auction_outcome ] ->
-                string
-              val dict : (string * T.t) Core.List.t
-              val of_string : string -> T.t option
-              val to_yojson : T.t -> [> `String of string ]
-              val of_yojson :
-                Yojson.Safe.json -> (T.t, string) Gemini__Json.Result.t
-            end
-          type auction_event =
-              [ `Auction_indicative_price of auction_indicative_price_event
-              | `Auction_open of auction_open_event
-              | `Auction_outcome of auction_outcome_event ]
-          val __auction_event_of_sexp__ : Sexplib.Sexp.t -> auction_event
-          val auction_event_of_sexp : Sexplib.Sexp.t -> auction_event
-          val sexp_of_auction_event : auction_event -> Sexplib.Sexp.t
-          val auction_event_to_yojson : auction_event -> Yojson.Safe.json
-          val auction_event_of_yojson :
-            Yojson.Safe.json -> (auction_event, string) Result.t
-          type event =
-              [ `Auction of auction_event
-              | `Change of change_event
-              | `Trade of trade_event ]
-          val __event_of_sexp__ : Sexplib.Sexp.t -> event
-          val event_of_sexp : Sexplib.Sexp.t -> event
-          val sexp_of_event : event -> Sexplib.Sexp.t
-          val event_to_yojson : event -> Yojson.Safe.json
-          val event_of_yojson : Yojson.Safe.json -> (event, string) Result.t
-          type update = {
-            event_id : int_number;
-            events : event array;
-            timestamp : Timestamp.sec option;
-            timestampms : Timestamp.ms option;
-          }
-          val update_to_yojson : update -> Yojson.Safe.json
-          val update_of_yojson :
-            Yojson.Safe.json -> update Ppx_deriving_yojson_runtime.error_or
-          val update_of_sexp : Sexplib.Sexp.t -> update
-          val sexp_of_update : update -> Sexplib.Sexp.t
-          type message = [ `Heartbeat of heartbeat | `Update of update ]
-          val __message_of_sexp__ : Sexplib.Sexp.t -> message
-          val message_of_sexp : Sexplib.Sexp.t -> message
-          val sexp_of_message : message -> Sexplib.Sexp.t
-          type response = {
-            socket_sequence : int_number;
-            message : message;
-          }
-          val response_of_sexp : Sexplib.Sexp.t -> response
-          val sexp_of_response : response -> Sexplib.Sexp.t
-          val response_to_yojson : response -> Yojson.Safe.json
-          val response_of_yojson :
-            Yojson.Safe.json -> (response, string) Result.t
         end
       val name : string
       val path : string list
       type uri_args = Symbol.t [@@deriving yojson, sexp]
       val uri_args_to_string : [< Symbol.t ] -> string
-      type request = T.request = { heartbeat : bool option; }
-      val request_to_yojson : request -> Yojson.Safe.json
-      val request_of_yojson :
-        Yojson.Safe.json -> request Ppx_deriving_yojson_runtime.error_or
-      val request_of_sexp : Sexplib.Sexp.t -> request
-      val sexp_of_request : request -> Sexplib.Sexp.t
-      module Message_type = T.Message_type
-      module Event_type = T.Event_type
-      type heartbeat = unit
-      val heartbeat_to_yojson : heartbeat -> Yojson.Safe.json
-      val heartbeat_of_yojson :
-        Yojson.Safe.json -> heartbeat Ppx_deriving_yojson_runtime.error_or
-      val heartbeat_of_sexp : Sexplib.Sexp.t -> heartbeat
-      val sexp_of_heartbeat : heartbeat -> Sexplib.Sexp.t
-      module Reason = T.Reason
-      type change_event =
-        T.change_event = {
+
+      type request = { heartbeat : bool option; } [@@deriving sexp, yojson]
+      module Message_type :
+      sig
+        type t = [`Heartbeat | `Update]
+        [@@deriving sexp, yojson, enumerate]
+        val to_string : [< t ] -> string
+      end
+
+      module Event_type :
+      sig
+        type t = [`Trade | `Change | `Auction]
+        [@@deriving sexp, yojson, enumerate]
+        val to_string : [< t ] -> string
+      end
+
+      type heartbeat = unit [@@deriving sexp, yojson]
+
+      module Reason : sig
+        type t =
+          [`Place | `Trade | `Cancel | `Initial]
+        [@@deriving sexp, yojson, enumerate]
+        val to_string : [< t ] -> string
+      end
+
+      type change_event = {
         price : decimal_string;
         side : Side.Bid_ask.t;
         reason : Reason.t;
         remaining : decimal_string;
         delta : decimal_string;
-      }
-      val change_event_to_yojson : change_event -> Yojson.Safe.json
-      val change_event_of_yojson :
-        Yojson.Safe.json -> change_event Ppx_deriving_yojson_runtime.error_or
-      val change_event_of_sexp : Sexplib.Sexp.t -> change_event
-      val sexp_of_change_event : change_event -> Sexplib.Sexp.t
-      type trade_event =
-        T.trade_event = {
+      } [@@deriving sexp, yojson]
+
+      type trade_event = {
         tid : int_number;
         price : decimal_string;
         amount : decimal_string;
         maker_side : Side.t;
-      }
-      val trade_event_to_yojson : trade_event -> Yojson.Safe.json
-      val trade_event_of_yojson :
-        Yojson.Safe.json -> trade_event Ppx_deriving_yojson_runtime.error_or
-      val trade_event_of_sexp : Sexplib.Sexp.t -> trade_event
-      val sexp_of_trade_event : trade_event -> Sexplib.Sexp.t
-      type auction_open_event =
-        T.auction_open_event = {
+      } [@@deriving sexp, yojson]
+
+      type auction_open_event = {
         auction_open_ms : Timestamp.ms;
         auction_time_ms : Timestamp.ms;
         first_indicative_ms : Timestamp.ms;
         last_cancel_time_ms : Timestamp.ms;
-      }
-      val auction_open_event_to_yojson :
-        auction_open_event -> Yojson.Safe.json
-      val auction_open_event_of_yojson :
-        Yojson.Safe.json ->
-        auction_open_event Ppx_deriving_yojson_runtime.error_or
-      val auction_open_event_of_sexp : Sexplib.Sexp.t -> auction_open_event
-      val sexp_of_auction_open_event : auction_open_event -> Sexplib.Sexp.t
-      module Auction_result = T.Auction_result
-      type auction_indicative_price_event =
-        T.auction_indicative_price_event = {
+      } [@@deriving sexp, yojson]
+
+      module Auction_result :
+      sig
+        type t =
+          [`Success | `Failure] [@@deriving sexp, enumerate, yojson]
+        val to_string : [<t] -> string
+      end
+
+      type auction_indicative_price_event = {
         eid : int_number;
         result : Auction_result.t;
         time_ms : Timestamp.ms;
@@ -695,17 +417,8 @@ module V1 : sig
         indicative_price : decimal_string;
         indicative_quantity : decimal_string;
       }
-      val auction_indicative_price_event_to_yojson :
-        auction_indicative_price_event -> Yojson.Safe.json
-      val auction_indicative_price_event_of_yojson :
-        Yojson.Safe.json ->
-        auction_indicative_price_event Ppx_deriving_yojson_runtime.error_or
-      val auction_indicative_price_event_of_sexp :
-        Sexplib.Sexp.t -> auction_indicative_price_event
-      val sexp_of_auction_indicative_price_event :
-        auction_indicative_price_event -> Sexplib.Sexp.t
-      type auction_outcome_event =
-        T.auction_outcome_event = {
+
+      type auction_outcome_event = {
         eid : int_number;
         result : Auction_result.t;
         time_ms : Timestamp.ms;
@@ -714,67 +427,51 @@ module V1 : sig
         collar_price : decimal_string;
         auction_price : decimal_string;
         auction_quantity : decimal_string;
-      }
-      val auction_outcome_event_to_yojson :
-        auction_outcome_event -> Yojson.Safe.json
-      val auction_outcome_event_of_yojson :
-        Yojson.Safe.json ->
-        auction_outcome_event Ppx_deriving_yojson_runtime.error_or
-      val auction_outcome_event_of_sexp :
-        Sexplib.Sexp.t -> auction_outcome_event
-      val sexp_of_auction_outcome_event :
-        auction_outcome_event -> Sexplib.Sexp.t
-      module Auction_event_type = T.Auction_event_type
+      } [@@deriving sexp, yojson]
+
+      module Auction_event_type :
+      sig
+          type t =
+            [ `Auction_open
+            | `Auction_indicative_price
+            | `Auction_outcome ]
+          [@@deriving sexp, enumerate, yojson]
+          val to_string : [<t] -> string
+        end
+
       type auction_event =
           [ `Auction_indicative_price of auction_indicative_price_event
           | `Auction_open of auction_open_event
           | `Auction_outcome of auction_outcome_event ]
-      val __auction_event_of_sexp__ : Sexplib.Sexp.t -> auction_event
-      val auction_event_of_sexp : Sexplib.Sexp.t -> auction_event
-      val sexp_of_auction_event : auction_event -> Sexplib.Sexp.t
-      val auction_event_to_yojson : auction_event -> Yojson.Safe.json
-      val auction_event_of_yojson :
-        Yojson.Safe.json -> (auction_event, string) Result.t
+      [@@deriving sexp, yojson]
+
       type event =
           [ `Auction of auction_event
           | `Change of change_event
           | `Trade of trade_event ]
-      val __event_of_sexp__ : Sexplib.Sexp.t -> event
-      val event_of_sexp : Sexplib.Sexp.t -> event
-      val sexp_of_event : event -> Sexplib.Sexp.t
-      val event_to_yojson : event -> Yojson.Safe.json
-      val event_of_yojson : Yojson.Safe.json -> (event, string) Result.t
-      type update =
-        T.update = {
+      [@@deriving sexp, yojson]
+
+      type update = {
         event_id : int_number;
         events : event array;
         timestamp : Timestamp.sec option;
         timestampms : Timestamp.ms option;
-      }
-      val update_to_yojson : update -> Yojson.Safe.json
-      val update_of_yojson :
-        Yojson.Safe.json -> update Ppx_deriving_yojson_runtime.error_or
-      val update_of_sexp : Sexplib.Sexp.t -> update
-      val sexp_of_update : update -> Sexplib.Sexp.t
-      type message = [ `Heartbeat of heartbeat | `Update of update ]
-      val __message_of_sexp__ : Sexplib.Sexp.t -> message
-      val message_of_sexp : Sexplib.Sexp.t -> message
-      val sexp_of_message : message -> Sexplib.Sexp.t
-      type response =
-        T.response = {
+      } [@@deriving sexp, yojson]
+
+      type message =
+        [ `Heartbeat of heartbeat | `Update of update ]
+      [@@deriving sexp]
+
+      type response = {
         socket_sequence : int_number;
         message : message;
-      }
-      val response_of_sexp : Sexplib.Sexp.t -> response
-      val sexp_of_response : response -> Sexplib.Sexp.t
-      val response_to_yojson : response -> Yojson.Safe.json
-      val response_of_yojson :
-        Yojson.Safe.json -> (response, string) Result.t
+      } [@@deriving sexp, yojson]
+
       val client :
         (module Cfg.S) ->
-        string option ->
-        string option ->
-        T.uri_args -> (unit * unit) Deferred.t
+        ?protocol:string ->
+        ?extensions:string ->
+        uri_args -> (unit * unit) Deferred.t
       val handle_client :
         [< Socket.Address.t ] ->
         Reader.t -> Writer.t -> unit Deferred.t
