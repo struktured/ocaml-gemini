@@ -24,7 +24,7 @@ module V1 : sig
     end
   module Timestamp :
     sig
-      type t = Core.Time.t [@@deriving sexp, yojson]
+      type t = Time.t [@@deriving sexp, yojson]
       type ms = t [@@deriving sexp, yojson]
       type sec = t [@@deriving sexp, yojson]
     end
@@ -67,45 +67,45 @@ module V1 : sig
       val name : string
       val path : string list
       module Status :
-        sig
-              val name : string
-              val path : string list
-              type request =
-                { order_id : int_number; } [@@deriving sexp, yojson]
-              type response = {
-                client_order_id : string option;
-                order_id : int_string;
-                id : int_string;
-                symbol : Symbol.t;
-                exchange : Exchange.t;
-                avg_execution_price : decimal_string;
-                side : Side.t;
-                type_ : Order_type.t;
-                timestamp : Timestamp.sec;
-                timestampms : Timestamp.ms;
-                is_live : bool;
-                is_cancelled : bool;
-                is_hidden : bool;
-                was_forced : bool;
-                executed_amount : decimal_string;
-                remaining_amount : decimal_string;
-                options : Order_execution_option.t list;
-                price : decimal_string;
-                original_amount : decimal_string;
-              } [@@deriving sexp, yojson]
-          val post :
-            (module Cfg.S) ->
-            Nonce.reader ->
-            request ->
-            [ `Bad_request of string
-            | `Error of Rest.Error.detail
-            | `Json_parse_error of Rest.Error.json_error
-            | `Not_acceptable of string
-            | `Not_found
-            | `Ok of response
-            | `Unauthorized of string ] Async.Deferred.t
-          val command : string * Async.Command.t
-        end
+      sig
+        val name : string
+        val path : string list
+        type request =
+          { order_id : int_number; } [@@deriving sexp, yojson]
+        type response = {
+          client_order_id : string option;
+          order_id : int_string;
+          id : int_string;
+          symbol : Symbol.t;
+          exchange : Exchange.t;
+          avg_execution_price : decimal_string;
+          side : Side.t;
+          type_ : Order_type.t;
+          timestamp : Timestamp.sec;
+          timestampms : Timestamp.ms;
+          is_live : bool;
+          is_cancelled : bool;
+          is_hidden : bool;
+          was_forced : bool;
+          executed_amount : decimal_string;
+          remaining_amount : decimal_string;
+          options : Order_execution_option.t list;
+          price : decimal_string;
+          original_amount : decimal_string;
+        } [@@deriving sexp, yojson]
+        val post :
+          (module Cfg.S) ->
+          Nonce.reader ->
+          request ->
+          [ `Bad_request of string
+          | `Error of Rest.Error.detail
+          | `Json_parse_error of Rest.Error.json_error
+          | `Not_acceptable of string
+          | `Not_found
+          | `Ok of response
+          | `Unauthorized of string ] Deferred.t
+        val command : string * Command.t
+      end
       module New :
         sig
           val name : string
@@ -130,8 +130,9 @@ module V1 : sig
             | `Not_acceptable of string
             | `Not_found
             | `Ok of response
-            | `Unauthorized of string ] Async.Deferred.t
-          val command : string * Async.Command.t
+            | `Unauthorized of string
+            ] Deferred.t
+          val command : string * Command.t
         end
       module Cancel :
         sig
@@ -154,18 +155,13 @@ module V1 : sig
                 | `Not_acceptable of string
                 | `Not_found
                 | `Ok of response
-                | `Unauthorized of string ] Async.Deferred.t
-              val command : string * Async.Command.t
+                | `Unauthorized of string ] Deferred.t
+              val command : string * Command.t
             end
           type details = {
             cancelled_orders : Status.response list;
             cancel_rejects : Status.response list;
-          }
-          val details_to_yojson : details -> Yojson.Safe.json
-          val details_of_yojson :
-            Yojson.Safe.json -> details Ppx_deriving_yojson_runtime.error_or
-          val details_of_sexp : Sexplib.Sexp.t -> details
-          val sexp_of_details : details -> Sexplib.Sexp.t
+          } [@@deriving sexp, yojson]
           module All :
             sig
               val name : string
@@ -183,108 +179,50 @@ module V1 : sig
                 | `Not_acceptable of string
                 | `Not_found
                 | `Ok of response
-                | `Unauthorized of string ] Async.Deferred.t
-              val command : string * Async.Command.t
+                | `Unauthorized of string ] Deferred.t
+              val command : string * Command.t
             end
           module Session :
             sig
-              module T :
-                sig
-                  val name : string
-                  val path : string list
-                  type request = unit
-                  val request_to_yojson : request -> Yojson.Safe.json
-                  val request_of_yojson :
-                    Yojson.Safe.json ->
-                    request Ppx_deriving_yojson_runtime.error_or
-                  val request_of_sexp : Sexplib.Sexp.t -> request
-                  val sexp_of_request : request -> Sexplib.Sexp.t
-                  type response = { details : details; }
-                  val response_to_yojson : response -> Yojson.Safe.json
-                  val response_of_yojson :
-                    Yojson.Safe.json ->
-                    response Ppx_deriving_yojson_runtime.error_or
-                  val response_of_sexp : Sexplib.Sexp.t -> response
-                  val sexp_of_response : response -> Sexplib.Sexp.t
-                end
               val name : string
               val path : string list
-              type request = unit
-              val request_to_yojson : request -> Yojson.Safe.json
-              val request_of_yojson :
-                Yojson.Safe.json ->
-                request Ppx_deriving_yojson_runtime.error_or
-              val request_of_sexp : Sexplib.Sexp.t -> request
-              val sexp_of_request : request -> Sexplib.Sexp.t
-              type response = T.response = { details : details; }
-              val response_to_yojson : response -> Yojson.Safe.json
-              val response_of_yojson :
-                Yojson.Safe.json ->
-                response Ppx_deriving_yojson_runtime.error_or
-              val response_of_sexp : Sexplib.Sexp.t -> response
-              val sexp_of_response : response -> Sexplib.Sexp.t
+              type request = unit [@@deriving sexp, yojson]
+              type response = { details : details; } [@@deriving sexp, yojson]
               val post :
                 (module Cfg.S) ->
                 Nonce.reader ->
-                T.request ->
+                request ->
                 [ `Bad_request of string
                 | `Error of Rest.Error.detail
                 | `Json_parse_error of Rest.Error.json_error
                 | `Not_acceptable of string
                 | `Not_found
-                | `Ok of T.response
-                | `Unauthorized of string ] Async.Deferred.t
-              val command : string * Async.Command.t
+                | `Ok of response
+                | `Unauthorized of string ] Deferred.t
+              val command : string * Command.t
             end
-          val command : string * Async.Command.t
+          val command : string * Command.t
         end
-      val command : string * Async.Command.t
+      val command : string * Command.t
     end
   module Orders :
     sig
-      module T :
-        sig
-          val name : string
-          val path : string list
-          type request = unit
-          val request_to_yojson : request -> Yojson.Safe.json
-          val request_of_yojson :
-            Yojson.Safe.json -> request Ppx_deriving_yojson_runtime.error_or
-          val request_of_sexp : Sexplib.Sexp.t -> request
-          val sexp_of_request : request -> Sexplib.Sexp.t
-          type response = Order.Status.response list
-          val response_to_yojson : response -> Yojson.Safe.json
-          val response_of_yojson :
-            Yojson.Safe.json -> response Ppx_deriving_yojson_runtime.error_or
-          val response_of_sexp : Sexplib.Sexp.t -> response
-          val sexp_of_response : response -> Sexplib.Sexp.t
-        end
       val name : string
       val path : string list
-      type request = unit
-      val request_to_yojson : request -> Yojson.Safe.json
-      val request_of_yojson :
-        Yojson.Safe.json -> request Ppx_deriving_yojson_runtime.error_or
-      val request_of_sexp : Sexplib.Sexp.t -> request
-      val sexp_of_request : request -> Sexplib.Sexp.t
-      type response = Order.Status.response list
-      val response_to_yojson : response -> Yojson.Safe.json
-      val response_of_yojson :
-        Yojson.Safe.json -> response Ppx_deriving_yojson_runtime.error_or
-      val response_of_sexp : Sexplib.Sexp.t -> response
-      val sexp_of_response : response -> Sexplib.Sexp.t
+      type request = unit [@@deriving sexp, yojson]
+      type response = Order.Status.response list [@@deriving sexp, yojson]
       val post :
         (module Cfg.S) ->
         Nonce.reader ->
-        T.request ->
+        request ->
         [ `Bad_request of string
         | `Error of Rest.Error.detail
         | `Json_parse_error of Rest.Error.json_error
         | `Not_acceptable of string
         | `Not_found
-        | `Ok of T.response
-        | `Unauthorized of string ] Async.Deferred.t
-      val command : string * Async.Command.t
+        | `Ok of response
+        | `Unauthorized of string ] Deferred.t
+      val command : string * Command.t
     end
   module Mytrades :
     sig
@@ -302,64 +240,27 @@ module V1 : sig
         client_order_id : string option;
         is_auction_fill : bool;
         exchange : Exchange.t;
-      }
-      val trade_to_yojson : trade -> Yojson.Safe.json
-      val trade_of_yojson :
-        Yojson.Safe.json -> trade Ppx_deriving_yojson_runtime.error_or
-      val trade_of_sexp : Sexplib.Sexp.t -> trade
-      val sexp_of_trade : trade -> Sexplib.Sexp.t
-      module T :
-        sig
-          val name : string
-          val path : string list
-          type request = {
-            symbol : Symbol.t;
-            limit_trades : int option;
-            timestamp : Timestamp.sec option;
-          }
-          val request_to_yojson : request -> Yojson.Safe.json
-          val request_of_yojson :
-            Yojson.Safe.json -> request Ppx_deriving_yojson_runtime.error_or
-          val request_of_sexp : Sexplib.Sexp.t -> request
-          val sexp_of_request : request -> Sexplib.Sexp.t
-          type response = trade list
-          val response_to_yojson : response -> Yojson.Safe.json
-          val response_of_yojson :
-            Yojson.Safe.json -> response Ppx_deriving_yojson_runtime.error_or
-          val response_of_sexp : Sexplib.Sexp.t -> response
-          val sexp_of_response : response -> Sexplib.Sexp.t
-        end
+      } [@@deriving sexp, yojson]
       val name : string
       val path : string list
-      type request =
-        T.request = {
+      type request = {
         symbol : Symbol.t;
         limit_trades : int option;
         timestamp : Timestamp.sec option;
-      }
-      val request_to_yojson : request -> Yojson.Safe.json
-      val request_of_yojson :
-        Yojson.Safe.json -> request Ppx_deriving_yojson_runtime.error_or
-      val request_of_sexp : Sexplib.Sexp.t -> request
-      val sexp_of_request : request -> Sexplib.Sexp.t
-      type response = trade list
-      val response_to_yojson : response -> Yojson.Safe.json
-      val response_of_yojson :
-        Yojson.Safe.json -> response Ppx_deriving_yojson_runtime.error_or
-      val response_of_sexp : Sexplib.Sexp.t -> response
-      val sexp_of_response : response -> Sexplib.Sexp.t
+      } [@@deriving sexp, yojson]
+      type response = trade list [@@deriving sexp, yojson]
       val post :
         (module Cfg.S) ->
         Nonce.reader ->
-        T.request ->
+        request ->
         [ `Bad_request of string
         | `Error of Rest.Error.detail
         | `Json_parse_error of Rest.Error.json_error
         | `Not_acceptable of string
         | `Not_found
-        | `Ok of T.response
-        | `Unauthorized of string ] Async.Deferred.t
-      val command : string * Async.Command.t
+        | `Ok of response
+        | `Unauthorized of string ] Deferred.t
+      val command : string * Command.t
     end
   module Tradevolume :
     sig
@@ -383,126 +284,50 @@ module V1 : sig
         sell_taker_base : decimal_number;
         sell_taker_notional : decimal_number;
         sell_taker_count : int_number;
-      }
-      val volume_to_yojson : volume -> Yojson.Safe.json
-      val volume_of_yojson :
-        Yojson.Safe.json -> volume Ppx_deriving_yojson_runtime.error_or
-      val volume_of_sexp : Sexplib.Sexp.t -> volume
-      val sexp_of_volume : volume -> Sexplib.Sexp.t
-      module T :
-        sig
-          val name : string
-          val path : string list
-          type request = unit
-          val request_to_yojson : request -> Yojson.Safe.json
-          val request_of_yojson :
-            Yojson.Safe.json -> request Ppx_deriving_yojson_runtime.error_or
-          val request_of_sexp : Sexplib.Sexp.t -> request
-          val sexp_of_request : request -> Sexplib.Sexp.t
-          type response = volume list list
-          val response_to_yojson : response -> Yojson.Safe.json
-          val response_of_yojson :
-            Yojson.Safe.json -> response Ppx_deriving_yojson_runtime.error_or
-          val response_of_sexp : Sexplib.Sexp.t -> response
-          val sexp_of_response : response -> Sexplib.Sexp.t
-        end
+      } [@@deriving sexp, yojson]
       val name : string
       val path : string list
-      type request = unit
-      val request_to_yojson : request -> Yojson.Safe.json
-      val request_of_yojson :
-        Yojson.Safe.json -> request Ppx_deriving_yojson_runtime.error_or
-      val request_of_sexp : Sexplib.Sexp.t -> request
-      val sexp_of_request : request -> Sexplib.Sexp.t
-      type response = volume list list
-      val response_to_yojson : response -> Yojson.Safe.json
-      val response_of_yojson :
-        Yojson.Safe.json -> response Ppx_deriving_yojson_runtime.error_or
-      val response_of_sexp : Sexplib.Sexp.t -> response
-      val sexp_of_response : response -> Sexplib.Sexp.t
+      type request = unit [@@deriving sexp, yojson]
+      type response = volume list list [@@deriving sexp, yojson]
       val post :
         (module Cfg.S) ->
         Nonce.reader ->
-        T.request ->
+        request ->
         [ `Bad_request of string
         | `Error of Rest.Error.detail
         | `Json_parse_error of Rest.Error.json_error
         | `Not_acceptable of string
         | `Not_found
-        | `Ok of T.response
-        | `Unauthorized of string ] Async.Deferred.t
-      val command : string * Async.Command.t
+        | `Ok of response
+        | `Unauthorized of string ] Deferred.t
+      val command : string * Command.t
     end
   module Balances :
     sig
-      module T :
-        sig
-          val name : string
-          val path : string list
-          type request = unit
-          val request_to_yojson : request -> Yojson.Safe.json
-          val request_of_yojson :
-            Yojson.Safe.json -> request Ppx_deriving_yojson_runtime.error_or
-          val request_of_sexp : Sexplib.Sexp.t -> request
-          val sexp_of_request : request -> Sexplib.Sexp.t
-          type balance = {
-            currency : Currency.t;
-            amount : decimal_string;
-            available : decimal_string;
-            available_for_withdrawal : decimal_string;
-            type_ : string;
-          }
-          val balance_to_yojson : balance -> Yojson.Safe.json
-          val balance_of_yojson :
-            Yojson.Safe.json -> balance Ppx_deriving_yojson_runtime.error_or
-          val balance_of_sexp : Sexplib.Sexp.t -> balance
-          val sexp_of_balance : balance -> Sexplib.Sexp.t
-          type response = balance list
-          val response_to_yojson : response -> Yojson.Safe.json
-          val response_of_yojson :
-            Yojson.Safe.json -> response Ppx_deriving_yojson_runtime.error_or
-          val response_of_sexp : Sexplib.Sexp.t -> response
-          val sexp_of_response : response -> Sexplib.Sexp.t
-        end
       val name : string
       val path : string list
-      type request = unit
-      val request_to_yojson : request -> Yojson.Safe.json
-      val request_of_yojson :
-        Yojson.Safe.json -> request Ppx_deriving_yojson_runtime.error_or
-      val request_of_sexp : Sexplib.Sexp.t -> request
-      val sexp_of_request : request -> Sexplib.Sexp.t
+      type request = unit [@@deriving sexp, yojson]
       type balance =
-        T.balance = {
+      {
         currency : Currency.t;
         amount : decimal_string;
         available : decimal_string;
         available_for_withdrawal : decimal_string;
         type_ : string;
-      }
-      val balance_to_yojson : balance -> Yojson.Safe.json
-      val balance_of_yojson :
-        Yojson.Safe.json -> balance Ppx_deriving_yojson_runtime.error_or
-      val balance_of_sexp : Sexplib.Sexp.t -> balance
-      val sexp_of_balance : balance -> Sexplib.Sexp.t
-      type response = balance list
-      val response_to_yojson : response -> Yojson.Safe.json
-      val response_of_yojson :
-        Yojson.Safe.json -> response Ppx_deriving_yojson_runtime.error_or
-      val response_of_sexp : Sexplib.Sexp.t -> response
-      val sexp_of_response : response -> Sexplib.Sexp.t
+      } [@@deriving sexp, yojson]
+      type response = balance list [@@deriving sexp, yojson]
       val post :
         (module Cfg.S) ->
         Nonce.reader ->
-        T.request ->
+        request ->
         [ `Bad_request of string
         | `Error of Rest.Error.detail
         | `Json_parse_error of Rest.Error.json_error
         | `Not_acceptable of string
         | `Not_found
-        | `Ok of T.response
-        | `Unauthorized of string ] Async.Deferred.t
-      val command : string * Async.Command.t
+        | `Ok of response
+        | `Unauthorized of string ] Deferred.t
+      val command : string * Command.t
     end
   module Market_data :
     sig
@@ -510,70 +335,16 @@ module V1 : sig
         sig
           module Bid_ask :
             sig
-              module T :
-                sig
-                  type t = [ `Ask | `Bid ]
-                  val __t_of_sexp__ : Sexplib.Sexp.t -> t
-                  val t_of_sexp : Sexplib.Sexp.t -> t
-                  val sexp_of_t : t -> Sexplib.Sexp.t
-                  val all : t list
-                  val to_string : [< t ] -> string
-                end
-              type t = [ `Ask | `Bid ]
-              val __t_of_sexp__ : Sexplib.Sexp.t -> t
-              val t_of_sexp : Sexplib.Sexp.t -> t
-              val sexp_of_t : t -> Sexplib.Sexp.t
-              val all : t list
+              type t = [ `Ask | `Bid ] [@@deriving sexp, enumerate, yojson]
               val to_string : [< t ] -> string
-              val dict : (string * T.t) Core.List.t
-              val of_string : string -> T.t option
-              val to_yojson : T.t -> [> `String of string ]
-              val of_yojson :
-                Yojson.Safe.json -> (T.t, string) Gemini__Json.Result.t
             end
           module Auction :
             sig
-              module T :
-                sig
-                  type t = [ `Auction ]
-                  val __t_of_sexp__ : Sexplib.Sexp.t -> t
-                  val t_of_sexp : Sexplib.Sexp.t -> t
-                  val sexp_of_t : t -> Sexplib.Sexp.t
-                  val all : t list
-                  val to_string : [< `Auction ] -> string
-                end
-              type t = [ `Auction ]
-              val __t_of_sexp__ : Sexplib.Sexp.t -> t
-              val t_of_sexp : Sexplib.Sexp.t -> t
-              val sexp_of_t : t -> Sexplib.Sexp.t
-              val all : t list
+              type t = [ `Auction ] [@@deriving sexp, enumerate, yojson]
               val to_string : [< `Auction ] -> string
-              val dict : (string * T.t) Core.List.t
-              val of_string : string -> T.t option
-              val to_yojson : T.t -> [> `String of string ]
-              val of_yojson :
-                Yojson.Safe.json -> (T.t, string) Gemini__Json.Result.t
             end
-          module T :
-            sig
-              type t = [ `Ask | `Auction | `Bid ]
-              val __t_of_sexp__ : Sexplib.Sexp.t -> t
-              val t_of_sexp : Sexplib.Sexp.t -> t
-              val sexp_of_t : t -> Sexplib.Sexp.t
-              val all : t list
-              val to_string : [< t ] -> string
-            end
-          type t = [ `Ask | `Auction | `Bid ]
-          val __t_of_sexp__ : Sexplib.Sexp.t -> t
-          val t_of_sexp : Sexplib.Sexp.t -> t
-          val sexp_of_t : t -> Sexplib.Sexp.t
-          val all : t list
+          type t = [ `Ask | `Auction | `Bid ] [@@deriving sexp, enumerate, yojson]
           val to_string : [< t ] -> string
-          val dict : (string * T.t) Core.List.t
-          val of_string : string -> T.t option
-          val to_yojson : T.t -> [> `String of string ]
-          val of_yojson :
-            Yojson.Safe.json -> (T.t, string) Gemini__Json.Result.t
         end
       module T :
         sig
@@ -1001,13 +772,13 @@ module V1 : sig
         Yojson.Safe.json -> (response, string) Result.t
       val client :
         (module Cfg.S) ->
-        string Core.Option.t ->
-        string Core.Option.t ->
-        T.uri_args -> (unit * unit) Async_extra__.Import.Deferred.t
+        string option ->
+        string option ->
+        T.uri_args -> (unit * unit) Deferred.t
       val handle_client :
-        [< Async.Socket.Address.t ] ->
-        Async.Reader.t -> Async.Writer.t -> unit Async.Deferred.t
-      val command : string * Async.Command.t
+        [< Socket.Address.t ] ->
+        Reader.t -> Writer.t -> unit Deferred.t
+      val command : string * Command.t
     end
-  val command : Async.Command.t
+  val command : Command.t
 end
