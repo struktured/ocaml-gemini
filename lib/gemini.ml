@@ -72,11 +72,12 @@ end
 module Currency = struct
 
   module T = struct
-    type t = [`Eth | `Btc | `Usd] [@@deriving sexp, enumerate]
+    type t = [`Eth | `Btc | `Usd | `Zec] [@@deriving sexp, enumerate]
     let to_string = function
       | `Eth -> "eth"
       | `Btc -> "btc"
       | `Usd -> "usd"
+      | `Zec -> "zec"
   end
   include T
   include Json.Make(T)
@@ -85,11 +86,17 @@ end
 
 module Symbol = struct
   module T = struct
-   type t = [`Btcusd | `Ethusd | `Ethbtc] [@@deriving sexp, enumerate]
-    let to_string = function
+   type t =
+     [`Btcusd | `Ethusd | `Ethbtc | `Zecusd | `Zecbtc | `Zeceth]
+   [@@deriving sexp, enumerate]
+   let to_string : [<t] -> string = function
       | `Btcusd -> "btcusd"
       | `Ethusd -> "ethusd"
       | `Ethbtc -> "ethbtc"
+      | `Zecusd -> "zecusd"
+      | `Zecbtc -> "zecbtc"
+      | `Zeceth -> "zeceth"
+
   end
   include T
   include Json.Make(T)

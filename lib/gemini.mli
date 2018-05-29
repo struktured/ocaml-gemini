@@ -31,13 +31,14 @@ module V1 : sig
   module Currency :
     sig
       type t =
-        [ `Btc | `Eth | `Usd ] [@@deriving sexp, yojson, enumerate]
+        [ `Btc | `Eth | `Usd | `Zec] [@@deriving sexp, yojson, enumerate]
       val to_string : [< t] -> string
     end
   module Symbol :
     sig
       type t =
-        [ `Btcusd | `Ethbtc | `Ethusd ] [@@deriving sexp, yojson, enumerate]
+        [ `Btcusd | `Ethbtc | `Ethusd | `Zecusd | `Zecbtc | `Zeceth]
+      [@@deriving sexp, yojson, enumerate]
       val to_string : [< t] -> string
     end
   module Exchange :
