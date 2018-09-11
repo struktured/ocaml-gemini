@@ -33,11 +33,14 @@ let client (module Cfg : Cfg.S) ?protocol ?extensions uri_args =
   let tcp_fun s r w =
     Socket.(setopt s Opt.nodelay true);
     (if scheme = "https" || scheme = "wss" then
+       (Unix.Inet_addr.of_string_or_getbyname host >>|
+        Ipaddr_unix.of_inet_addr
+       ) >>= fun addr ->
        (*`OpenSSL_with_config of string * Ipaddr.t * int * Ssl.config*)
        Conduit_async.connect
          (`OpenSSL_with_config (
-             host,
-             (Ipaddr.of_string_exn (Uri.to_string uri)),
+             "wss",
+             addr,
              port,
              (Conduit_async.Ssl.configure ~version:Tlsv1_2 ())
            )
