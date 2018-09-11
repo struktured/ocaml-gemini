@@ -33,8 +33,15 @@ let client (module Cfg : Cfg.S) ?protocol ?extensions uri_args =
   let tcp_fun s r w =
     Socket.(setopt s Opt.nodelay true);
     (if scheme = "https" || scheme = "wss" then
-       Conduit_async_ssl.
-         (ssl_connect (Ssl_config.configure ~version:Tlsv1_2 ()) r w)
+       (*`OpenSSL_with_config of string * Ipaddr.t * int * Ssl.config*)
+       Conduit_async.connect
+         (`OpenSSL_with_config (
+             host,
+             (Ipaddr.of_string_exn (Uri.to_string uri)),
+             port,
+             (Conduit_async.Ssl.configure ~version:Tlsv1_2 ())
+           )
+         )
      else return (r, w)) >>= fun (r, w) ->
     let extra_headers = Cohttp.Header.init () in
     let extra_headers = Option.value_map protocol ~default:extra_headers
@@ -51,7 +58,7 @@ let client (module Cfg : Cfg.S) ?protocol ?extensions uri_args =
         ~extra_headers
         ~log:Lazy.(force Log.Global.log)
         ~heartbeat:Time_ns.Span.(of_int_sec 5)
-        uri s r w
+        uri r w
     in Deferred.both
       (* TODO decide what to do with input pipe *)
       (Pipe.transfer Reader.(pipe @@ Lazy.force stdin) w ~f:begin fun s ->
@@ -70,7 +77,7 @@ let client (module Cfg : Cfg.S) ?protocol ?extensions uri_args =
       )
     (*]*)
   in
-  let hostport = Host_and_port.create host port in
+  let hostport = Host_and_port.create ~host ~port in
   Tcp.(with_connection Where_to_connect.(of_host_and_port hostport) tcp_fun)
 
 let handle_client addr reader writer =
@@ -89,7 +96,7 @@ let handle_client addr reader writer =
       Log.Global.info "Client %s disconnected" addr_str;
       Deferred.unit
     | `Ok ({ Websocket_async.Frame.opcode;
-             extension; final; content } as frame
+             extension=_; final=_; content } as frame
           ) ->
       let open Websocket_async.Frame in
       Log.Global.debug "<- %s" (show frame);
@@ -100,7 +107,7 @@ let handle_client addr reader writer =
           (* Immediately echo and pass this last message to the user *)
           if String.length content >= 2 then
             Some (create ~opcode:Opcode.Close
-                          ~content:(String.sub content 0 2) ()), true
+                          ~content:(String.sub content ~pos:0 ~len:2) ()), true
           else
           Some (close 100), true
         | Opcode.Pong -> None, false

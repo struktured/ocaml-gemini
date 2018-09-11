@@ -5,13 +5,13 @@ homepage: "https://github.com/struktured/ocaml-gemini"
 license: "MIT"
 
 build: [
-  ["jbuilder" "build" "-p" name "-j" jobs]
+  ["dune" "build" "-p" name "-j" jobs]
 ]
 
 depends: [
   "async" {>= "v0.10.0"}
   "cohttp-async"
-  "jbuilder" {build}
+  "dune" {build}
   "ppx_jane"
   "uri"
   "hex"

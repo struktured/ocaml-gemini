@@ -2,6 +2,7 @@
 module Error = struct
   type http = [ `Bad_request of string
               | `Not_found
+              | `Service_unavailable of string
               | `Not_acceptable of string
               | `Unauthorized of string] [@@deriving sexp]
   type json_error = {message:string;body:string} [@@deriving sexp]
@@ -223,9 +224,9 @@ struct
     | `Bad_request ->
       Cohttp_async.Body.to_string body >>| fun body ->
       `Bad_request body
-    | `Unauthorized ->
+    | `Service_unavailable ->
       Cohttp_async.Body.to_string body >>| fun body ->
-      `Unauthorized body
+     `Service_unavailable body
     | (code : Cohttp.Code.status_code) ->
       Cohttp_async.Body.to_string body >>| fun body ->
       failwiths (sprintf "unexpected status code (body=%S)" body)

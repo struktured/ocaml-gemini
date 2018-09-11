@@ -1,15 +1,15 @@
 
 build:
-	jbuilder build
+	dune build
 
 install: build
-	jbuilder install
+	dune install
 
 default:
 	build
 
 clean :
-	jbuilder clean
+	dune clean
 
 test: build
-	jbuilder build @runtest
+	dune build @runtest

@@ -23,7 +23,7 @@
     let create_nonce_file ?(default=0) filename =
       try_with ~extract_exn:true (fun () ->
           Unix.with_file ~mode:[`Rdonly] filename
-        ~f:(fun fd ->  Deferred.unit)
+        ~f:(fun _fd ->  Deferred.unit)
         ) >>= function
       | Result.Ok _ -> Deferred.unit
       | Result.Error _ ->

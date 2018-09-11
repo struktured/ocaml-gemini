@@ -511,7 +511,7 @@ end
          collar_price:decimal_string;
          indicative_price:decimal_string;
          indicative_quantity:decimal_string
-        } [@@deriving sexp, yojson]
+        } [@@deriving sexp, of_yojson]
 
 
       type auction_outcome_event =
