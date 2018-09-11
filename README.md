@@ -11,7 +11,7 @@ From your project directory run
 
 `opam pin . -y`
 
-You can also build the code locally with make or jbuider.
+You can also build the code locally with make or dune.
 
 
 # Configuration
