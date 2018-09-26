@@ -4,20 +4,41 @@ module type CHANNEL = sig
 
   type uri_args [@@deriving sexp, enumerate]
   val uri_args_to_string : uri_args -> string
+  val default_uri_args : uri_args option
+
   type response [@@deriving sexp, yojson]
 
+  type query [@@deriving sexp]
+  val extra_headers :
+    (module Cfg.S) -> payload:string -> (string * string) list
+  val encode_query : query -> string * string
 end
 
 module Make(Channel:CHANNEL) = struct
-let client (module Cfg : Cfg.S) ?protocol ?extensions uri_args =
+let client (module Cfg : Cfg.S)
+    ?query ?uri_args () =
+  let query =
+    Option.map query
+      ~f:
+        (fun l -> List.fold ~init:String.Map.empty l
+           ~f:(fun map q ->
+               let key, data =
+                 Channel.encode_query (Channel.query_of_sexp q) in
+               String.Map.add_multi map ~key ~data
+              )
+        |> fun map ->
+        let keys = String.Map.keys map in
+        List.map keys ~f:(fun k -> k, String.Map.find_multi map k)
+        ) in
   let uri = Uri.make
       ~host:Cfg.api_host
       ~scheme:"https"
+      ?query
       ~path:
         (String.concat ~sep:"/"
            (Channel.path
             @
-            [(Channel.uri_args_to_string uri_args)]
+            Option.(map ~f:(Channel.uri_args_to_string) uri_args |> to_list)
            )
         )
       ()
@@ -36,26 +57,21 @@ let client (module Cfg : Cfg.S) ?protocol ?extensions uri_args =
        (Unix.Inet_addr.of_string_or_getbyname host >>|
         Ipaddr_unix.of_inet_addr
        ) >>= fun addr ->
-       Conduit_async.connect
-         (`OpenSSL_with_config (
-             "wss",
-             addr,
-             port,
-             (Conduit_async.Ssl.configure ~version:Tlsv1_2 ())
-           )
+       Conduit_async.
+         (connect
+            (`OpenSSL_with_config
+               (
+                 "wss",
+                 addr,
+                 port,
+                 Ssl.configure ~version:Tlsv1_2 ()
+               )
+            )
          )
      else return (r, w)) >>= fun (r, w) ->
-    let extra_headers = Cohttp.Header.init () in
-    let extra_headers = Option.value_map protocol ~default:extra_headers
-        ~f:(fun proto ->
-            Cohttp.Header.add
-              extra_headers "Sec-Websocket-Protocol" proto)
-    in
-    let extra_headers = Option.value_map extensions ~default:extra_headers
-        ~f:(fun exts ->
-            Cohttp.Header.add
-              extra_headers "Sec-Websocket-Extensions" exts)
-    in
+    let payload = "TODO" in
+    let extra_headers = Cohttp.Header.of_list
+       (Channel.extra_headers (module Cfg) ~payload) in
     let r, w = Websocket_async.client_ez
         ~extra_headers
         ~log:Lazy.(force Log.Global.log)
@@ -143,29 +159,32 @@ let command =
     let open Command.Spec in
     empty
     +> Cfg.param
-    +> flag "-protocol" (optional string)
-      ~doc:"str websocket protocol header"
-    +> flag "-extensions" (optional string)
-      ~doc:"str websocket extensions header"
     +> flag "-loglevel" (optional int) ~doc:"1-3 loglevel"
-    +> anon ("uri_args" %: sexp)
-  in
+    +> flag "-query" (listed sexp) ~doc:"str query parameters"
+    +> anon (maybe ("uri_args" %: sexp))
+ in
   let set_loglevel = function
     | 2 -> Log.Global.set_level `Info
     | 3 -> Log.Global.set_level `Debug
     | _ -> ()
   in
   let run cfg
-      protocol extensions loglevel uri_args () =
+      loglevel query uri_args () =
     let cfg = Cfg.get cfg in
     let module Cfg = (val cfg:Cfg.S) in
     Option.iter loglevel ~f:set_loglevel;
-    let uri_args = Channel.uri_args_of_sexp uri_args in
-    client (module Cfg) ?protocol ?extensions uri_args >>= fun _ ->
+    let uri_args =
+      Option.first_some
+        (Option.map ~f:Channel.uri_args_of_sexp uri_args)
+        Channel.default_uri_args in
+    let query = match List.is_empty query with
+      | true -> None
+      | false -> Some query in
+    client (module Cfg)
+      ?query ?uri_args () >>= fun _ ->
     Deferred.unit
   in
   Channel.name,
   Command.async_spec
     ~summary:(sprintf "Gemini %s Websocket Command" Channel.name) spec run
 end
-

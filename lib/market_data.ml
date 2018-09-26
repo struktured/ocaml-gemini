@@ -37,7 +37,14 @@ module T = struct
   let name = "marketdata"
   let path = path@["marketdata"]
   type uri_args = Symbol.t [@@deriving sexp, yojson, enumerate]
+  let default_uri_args = Some `Ethusd
   let uri_args_to_string = Symbol.to_string
+
+  type query = unit [@@deriving sexp]
+  let encode_query _ = failwith "queries not supported"
+
+  let extra_headers (module Cfg: Cfg.S) ~payload:_ = []
+
   type request =
     { heartbeat : bool option [@default None] } [@@deriving sexp, yojson]
 

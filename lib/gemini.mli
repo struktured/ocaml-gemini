@@ -1,11 +1,12 @@
+open Common
 module Auth = Auth
 module Result = Json.Result
 
-type int_number = int64 [@encoding `number] [@@deriving sexp, yojson]
+(*type int_number = int64 [@encoding `number] [@@deriving sexp, yojson]
 type int_string = int64 [@encoding `string] [@@deriving sexp, yojson]
 type decimal_number = float [@encoding `number] [@@deriving sexp, yojson]
 type decimal_string = string [@@deriving sexp, yojson]
-
+*)
 
 module V1 : sig
   val path : string list
@@ -440,14 +441,21 @@ module V1 : sig
         message : message;
       } [@@deriving sexp, yojson]
 
-      val client :
+
+    val client :
+      (module Cfg.S) ->
+      ?query:Sexp.t sexp_list ->
+      ?uri_args:uri_args -> unit ->
+      (unit * unit) Deferred.t
+
+(*      val client :
         (module Cfg.S) ->
         ?protocol:string ->
         ?extensions:string ->
         uri_args -> (unit * unit) Deferred.t
       val handle_client :
         [< Socket.Address.t ] ->
-        Reader.t -> Writer.t -> unit Deferred.t
+        Reader.t -> Writer.t -> unit Deferred.t*)
       val command : string * Command.t
     end
   val command : Command.t

@@ -8,6 +8,20 @@ type decimal_string = string [@@deriving sexp, yojson]
 
 
 
+module Side =
+struct
+  module T = struct
+    type t = [`Buy | `Sell] [@@deriving sexp, enumerate]
+
+    let to_string = function
+      | `Buy -> "buy"
+      | `Sell -> "sell"
+  end
+  include T
+  include Json.Make(T)
+end
+
+
 module Symbol = struct
   module T = struct
    type t =
