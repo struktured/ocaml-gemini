@@ -289,7 +289,8 @@ module V1 = struct
         {currency:Currency.t;
          amount:decimal_string;
          available:decimal_string;
-         available_for_withdrawal:decimal_string [@key "availableForWithdrawal"];
+         available_for_withdrawal:decimal_string
+             [@key "availableForWithdrawal"];
          type_: string [@key "type"]
         } [@@deriving yojson, sexp]
       type response = balance list [@@deriving yojson, sexp]

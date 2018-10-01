@@ -1,3 +1,4 @@
+
 module type CHANNEL = sig
   val name : string
   val path : string list
@@ -10,13 +11,16 @@ module type CHANNEL = sig
 
   type query [@@deriving sexp]
   val extra_headers :
-    (module Cfg.S) -> payload:string -> (string * string) list
+    ?payload:string -> (module Cfg.S) -> (string * string) list
   val encode_query : query -> string * string
 end
 
-module Make(Channel:CHANNEL) = struct
+module Impl(Channel : CHANNEL) =
+struct
+
 let client (module Cfg : Cfg.S)
-    ?query ?uri_args () =
+    ?query ?uri_args ?nonce
+    () =
   let query =
     Option.map query
       ~f:
@@ -68,10 +72,21 @@ let client (module Cfg : Cfg.S)
                )
             )
          )
-     else return (r, w)) >>= fun (r, w) ->
-    let payload = "TODO" in
+     else return (r, w)
+    ) >>= fun (r, w) ->
+    let payload = `Null in
+    let path = Path.to_string Channel.path in
+    let%bind payload =
+      match nonce with
+      | None -> return None
+      | Some nonce ->
+      Nonce.Request.
+        (make ~nonce ~request:path ~payload () >>|
+         to_yojson
+        )
+      >>| fun s -> Yojson.Safe.to_string s |> Option.some in
     let extra_headers = Cohttp.Header.of_list
-       (Channel.extra_headers (module Cfg) ~payload) in
+        (Channel.extra_headers (module Cfg) ?payload) in
     let r, w = Websocket_async.client_ez
         ~extra_headers
         ~log:Lazy.(force Log.Global.log)
@@ -180,11 +195,25 @@ let command =
     let query = match List.is_empty query with
       | true -> None
       | false -> Some query in
+    let%bind nonce =
+      Nonce.File.pipe ~init:Nonce.File.default_filename () in
     client (module Cfg)
-      ?query ?uri_args () >>= fun _ ->
+      ?query ?uri_args ~nonce () >>= fun _ ->
     Deferred.unit
   in
   Channel.name,
   Command.async_spec
     ~summary:(sprintf "Gemini %s Websocket Command" Channel.name) spec run
+end
+
+module Make_no_request(Channel:CHANNEL) =
+struct
+  include Impl(Channel)
+  let client = client ?nonce:None
+end
+
+module Make(Channel:CHANNEL) =
+struct
+  include Impl(Channel)
+  let client ~nonce = client ~nonce
 end

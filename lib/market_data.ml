@@ -43,7 +43,7 @@ module T = struct
   type query = unit [@@deriving sexp]
   let encode_query _ = failwith "queries not supported"
 
-  let extra_headers (module Cfg: Cfg.S) ~payload:_ = []
+  let extra_headers ?payload:_ (module Cfg: Cfg.S) = []
 
   type request =
     { heartbeat : bool option [@default None] } [@@deriving sexp, yojson]
@@ -315,6 +315,6 @@ module T = struct
 
 end
 include T
-include Ws.Make(T)
+include Ws.Make_no_request(T)
 
 

@@ -13,6 +13,7 @@ module Error : sig
   type post = [http|json|response] [@@deriving sexp]
 end
 
+module Request = Nonce.Request
 
 module Operation : sig
 
@@ -34,17 +35,6 @@ module Operation : sig
 
 end
 
-module Request :
-sig
-  type request_nonce = { request : string; nonce : int; }
-  [@@deriving sexp, yojson]
-  type t = { request : string; nonce : int; payload : Yojson.Safe.json; }
-  [@@deriving to_yojson]
-
-  val make :
-    request:string ->
-    nonce:int Pipe.Reader.t -> Yojson.Safe.json -> t Deferred.t
-end
 module Response :
 sig
   module Json_result :
@@ -80,7 +70,6 @@ module Post :
       | Error.post
       ] Deferred.t
   end
-val nonce_file : string
 
 module Make :
   functor (Operation : Operation.S) ->

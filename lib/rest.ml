@@ -1,4 +1,3 @@
-
 module Error = struct
   type http = [ `Bad_request of string
               | `Not_found
@@ -35,38 +34,7 @@ module Operation = struct
 
 end
 
-module Request = struct
-
-  type request_nonce =
-    {request:string; nonce:int} [@@deriving sexp, yojson]
-
-  type t =
-    {request:string; nonce:int; payload:Yojson.Safe.json}
-
-  let make ~request ~nonce payload =
-    Pipe.read nonce >>= function
-    | `Ok nonce ->
-      return
-        {request;nonce;payload}
-    | `Eof -> assert false
-
-  let to_yojson {request;nonce;payload} : Yojson.Safe.json =
-    match request_nonce_to_yojson {request;nonce} with
-    | `Assoc assoc ->
-      (match payload with
-       | `Null -> `Assoc assoc
-       | `Assoc assoc' ->
-         `Assoc (assoc @ assoc')
-       | #Yojson.Safe.json as unsupported_yojson ->
-         failwithf "expected json association for request payload but got %S"
-           (Yojson.Safe.to_string unsupported_yojson) ()
-      )
-    | #Yojson.Safe.json as unsupported_yojson ->
-      failwithf "expected json association for type request_nonce but got %S"
-        (Yojson.Safe.to_string unsupported_yojson) ()
-
-end
-
+module Request = Nonce.Request
 
 module Response = struct
 
@@ -104,21 +72,6 @@ module Response = struct
     {result:Json_result.t} [@@deriving yojson, sexp]
 
   type t = {result:Json_result.t; payload:Yojson.Safe.json}
-
-  let to_yojson {result;payload} : Yojson.Safe.json =
-    match result_field_to_yojson {result} with
-    | `Assoc assoc ->
-      (match payload with
-       | `Null -> `Assoc assoc
-       | `Assoc assoc' ->
-         `Assoc (assoc @ assoc')
-       | #Yojson.Safe.json as unsupported_yojson ->
-         failwithf "expected json association for response payload but got %S"
-           (Yojson.Safe.to_string unsupported_yojson) ()
-      )
-    | #Yojson.Safe.json as unsupported_yojson ->
-      failwithf "expected json association for type result_field but got %S"
-        (Yojson.Safe.to_string unsupported_yojson) ()
 
 
   let parse json ok_of_yojson =
@@ -170,7 +123,7 @@ struct
       Operation.request_to_yojson request in
     let path = Path.to_string Operation.path in
      Request.make ~nonce
-      ~request:path payload >>=
+      ~request:path ~payload () >>=
     fun request ->
     (Request.to_yojson request |>
      Yojson.Safe.pretty_to_string |>
@@ -233,10 +186,6 @@ struct
         code Cohttp.Code.sexp_of_status_code
 end
 
-let nonce_file =
-  let root_path = Unix.getenv_exn "HOME" in
-  sprintf "%s/.gemini/nonce.txt" root_path
-
 
 module Make(Operation:Operation.S) =
 struct
@@ -255,7 +204,7 @@ struct
            Log.Global.info "request:\n %s"
              (Operation.sexp_of_request request |> Sexp.to_string);
            let config = Cfg.get config in
-           Nonce.File.pipe ~init:nonce_file () >>= fun nonce ->
+           Nonce.File.pipe ~init:Nonce.File.default_filename () >>= fun nonce ->
            post config nonce request >>= function
            | `Ok response ->
              Log.Global.info "response:\n %s"
@@ -289,7 +238,7 @@ struct
          fun () ->
            let request = () in
            let config = Cfg.get config in
-           Nonce.File.pipe ~init:nonce_file () >>= fun nonce ->
+           Nonce.File.(pipe ~init:default_filename) () >>= fun nonce ->
            post config nonce request >>= function
            | `Ok response ->
              Log.Global.info "response:\n %s"
@@ -308,5 +257,3 @@ struct
     )
 
 end
-
-

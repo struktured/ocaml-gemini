@@ -1,5 +1,14 @@
 open Common
 let path = [v1]
+(*
+type payload =
+{
+"request": "/v1/order/events",
+"nonce": 123456
+} [@@deriving sexp, yojson]
+*)
+
+module Request = Nonce.Request
 
 module T = struct
   let name = "order-events"
@@ -9,9 +18,16 @@ module T = struct
   let uri_args_to_string _ =
     failwith "uri path arguments not support for order events"
 
-  let extra_headers (module Cfg:Cfg.S) ~payload =
+  let extra_headers ?(payload="") (module Cfg:Cfg.S) =
+    let payload =
+     Auth.of_payload payload in
     ["X-GEMINI-APIKEY", Cfg.api_key;
-     "X-GEMINI-PAYLOAD", Auth.(of_payload payload |> to_string)
+     "X-GEMINI-PAYLOAD", Auth.to_string payload;
+     "X-GEMINI-SIGNATURE",
+     Auth.(hmac_sha384
+             ~api_secret:Cfg.api_key payload
+           |> to_string
+         )
     ]
 
   type request =
