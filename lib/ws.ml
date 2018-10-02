@@ -3,6 +3,7 @@ module type CHANNEL = sig
   val name : string
   val path : string list
 
+  val authentication : [`Private | `Public]
   type uri_args [@@deriving sexp, enumerate]
   val uri_args_to_string : uri_args -> string
   val default_uri_args : uri_args option
@@ -10,8 +11,6 @@ module type CHANNEL = sig
   type response [@@deriving sexp, yojson]
 
   type query [@@deriving sexp]
-  val extra_headers :
-    ?payload:string -> (module Cfg.S) -> (string * string) list
   val encode_query : query -> string * string
 end
 
@@ -85,8 +84,13 @@ let client (module Cfg : Cfg.S)
          to_yojson
         )
       >>| fun s -> Yojson.Safe.to_string s |> Option.some in
-    let extra_headers = Cohttp.Header.of_list
-        (Channel.extra_headers (module Cfg) ?payload) in
+    let extra_headers =
+      (match Channel.authentication with
+      | `Private ->
+        Option.map ~f:(fun p -> Auth.(to_headers (module Cfg) (of_payload p))) payload
+      | `Public -> None
+      )
+      |> Option.value ~default:(Cohttp.Header.init ()) in
     let r, w = Websocket_async.client_ez
         ~extra_headers
         ~log:Lazy.(force Log.Global.log)
@@ -196,7 +200,7 @@ let command =
       | true -> None
       | false -> Some query in
     let%bind nonce =
-      Nonce.File.pipe ~init:Nonce.File.default_filename () in
+      Nonce.File.(pipe ~init:default_filename) () in
     client (module Cfg)
       ?query ?uri_args ~nonce () >>= fun _ ->
     Deferred.unit

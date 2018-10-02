@@ -78,9 +78,9 @@ module Request = struct
 
   let to_yojson {request;nonce;payload} : Yojson.Safe.json =
     match request_nonce_to_yojson {request;nonce} with
-    | `Assoc assoc ->
+    | `Assoc assoc as a ->
       (match Option.value ~default:`Null payload with
-       | `Null -> `Assoc assoc
+       | `Null -> a
        | `Assoc assoc' ->
          `Assoc (assoc @ assoc')
        | #Yojson.Safe.json as unsupported_yojson ->

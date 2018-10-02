@@ -14,21 +14,12 @@ module T = struct
   let name = "order-events"
   let path = path@["order";"events"]
   type uri_args = [`None] [@@deriving sexp, enumerate]
+
+  let authentication = `Private
+
   let default_uri_args = None
   let uri_args_to_string _ =
     failwith "uri path arguments not support for order events"
-
-  let extra_headers ?(payload="") (module Cfg:Cfg.S) =
-    let payload =
-     Auth.of_payload payload in
-    ["X-GEMINI-APIKEY", Cfg.api_key;
-     "X-GEMINI-PAYLOAD", Auth.to_string payload;
-     "X-GEMINI-SIGNATURE",
-     Auth.(hmac_sha384
-             ~api_secret:Cfg.api_key payload
-           |> to_string
-         )
-    ]
 
   type request =
     { heartbeat : bool option [@default None] } [@@deriving sexp, yojson]

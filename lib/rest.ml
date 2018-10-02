@@ -30,7 +30,7 @@ module Operation = struct
     include S with type request = unit
   end
 
-  type status= [`Ok | `Error of string]
+  type status = [`Ok | `Error of string]
 
 end
 
@@ -132,20 +132,7 @@ struct
      return @@ Auth.of_payload s
     )
     >>= fun payload ->
-    let headers =
-      Cohttp.Header.of_list
-        ["Content-Type", "text/plain";
-         "Content-Length", "0";
-         "Cache-Control", "no-cache";
-         "X-GEMINI-PAYLOAD", Auth.to_string payload;
-         "X-GEMINI-APIKEY", Cfg.api_key;
-         "X-GEMINI-SIGNATURE",
-         Auth.(
-           hmac_sha384 ~api_secret:Cfg.api_secret payload |>
-           to_string
-         )
-        ]
-    in
+    let headers = Auth.to_headers (module Cfg) payload in
     let uri = Uri.make
         ~scheme:"https"
         ~host:Cfg.api_host
@@ -204,7 +191,8 @@ struct
            Log.Global.info "request:\n %s"
              (Operation.sexp_of_request request |> Sexp.to_string);
            let config = Cfg.get config in
-           Nonce.File.pipe ~init:Nonce.File.default_filename () >>= fun nonce ->
+           Nonce.File.(pipe ~init:default_filename)
+             () >>= fun nonce ->
            post config nonce request >>= function
            | `Ok response ->
              Log.Global.info "response:\n %s"

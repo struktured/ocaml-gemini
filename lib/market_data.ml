@@ -37,6 +37,8 @@ module T = struct
   let name = "marketdata"
   let path = path@["marketdata"]
   type uri_args = Symbol.t [@@deriving sexp, yojson, enumerate]
+
+  let authentication = `Public
   let default_uri_args = Some `Ethusd
   let uri_args_to_string = Symbol.to_string
 
