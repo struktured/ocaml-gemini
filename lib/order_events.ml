@@ -7,6 +7,9 @@ type payload =
 "nonce": 123456
 } [@@deriving sexp, yojson]
 *)
+(*
+{\"type\":\"subscription_ack\",\"accountId\":180909,\"subscriptionId\":\"ws-order-events-180909-b67k8l8pfre12r26pvtg\",\"symbolFilter\":[],\"apiSessionFilter\":[],\"eventTypeFilter\":[]}")
+*)
 
 module Request = Nonce.Request
 
@@ -64,7 +67,8 @@ module T = struct
     include Json.Make(T)
   end
 
-  type query = [ `Symbol_filter of Symbol.t
+
+    type query = [ `Symbol_filter of Symbol.t
                | `Event_type_filter of Event_type.t
                | `Api_session_filter of string
                ] [@@deriving sexp]
@@ -93,7 +97,7 @@ module T = struct
     include Json.Make(T)
   end
 
-  type order_event =
+  type _order_event =
     {order_id:string;
      api_session:Side.t;
      client_order_id:string;
@@ -113,6 +117,44 @@ module T = struct
      price : decimal_string option [@default None];
      total_spend : decimal_string option [@default None]
     } [@@deriving sexp, yojson]
+
+type subscription_ack =
+  {account_id:int_number [@key "accountId"];
+   subscription_id:string [@key "subscriptionId"];
+   symbol_filter:Symbol.t list [@key "symbolFilter"];
+   api_session_fiter:string list [@key "apiSessionFilter"];
+   event_type_filter:Event_type.t list [@key "eventTypeFilter"]
+  } [@@deriving sexp, yojson]
+
+type order_event =
+  [`Subscription_ack of subscription_ack] [@@deriving sexp]
+
+let order_event_of_yojson :
+    Yojson.Safe.json -> (order_event, string) Result.t = function
+    | `Assoc assoc as json ->
+      (List.Assoc.find assoc ~equal:String.equal
+         "type" |> function
+       | None ->
+         Result.failf "no order event type in json payload: %s"
+           (Yojson.Safe.to_string json)
+       | Some event_type ->
+         Event_type.of_yojson event_type |> function
+         | Result.Error _ as e -> e
+         | Result.Ok event_type ->
+           let json' = `Assoc
+               (List.Assoc.remove ~equal:String.equal assoc "type") in
+           (match event_type with
+            | `Subscription_ack ->
+              subscription_ack_of_yojson json' |>
+              Result.map ~f:(fun event -> `Subscription_ack event)
+            | _ -> failwith "TODO"
+           )
+      )
+    | #Yojson.Safe.json as json ->
+      Result.failf "expected association type in json payload: %s"
+        (Yojson.Safe.to_string json)
+
+
 
   type event = order_event [@@deriving sexp]
 
