@@ -127,16 +127,19 @@ type subscription_ack =
   } [@@deriving sexp, yojson]
 
 type order_event =
-  [`Subscription_ack of subscription_ack] [@@deriving sexp]
+  [`Subscription_ack of subscription_ack |
+   `Events of order_event list] [@@deriving sexp]
 
-let order_event_of_yojson :
+let rec order_event_of_yojson :
     Yojson.Safe.json -> (order_event, string) Result.t = function
     | `Assoc assoc as json ->
       (List.Assoc.find assoc ~equal:String.equal
          "type" |> function
        | None ->
-         Result.failf "no order event type in json payload: %s"
-           (Yojson.Safe.to_string json)
+         subscription_ack_of_yojson json |>
+         Result.map ~f:(fun event -> `Subscription_ack event);
+(*         Result.failf "no order event type in json payload: %s"
+           (Yojson.Safe.to_string json)*)
        | Some event_type ->
          Event_type.of_yojson event_type |> function
          | Result.Error _ as e -> e
@@ -150,11 +153,14 @@ let order_event_of_yojson :
             | _ -> failwith "TODO"
            )
       )
+
+    | (`List l : Yojson.Safe.json) ->
+      Result.(all (List.map l ~f:order_event_of_yojson) |>
+              map ~f:(fun x -> `Events x)
+             )
     | #Yojson.Safe.json as json ->
       Result.failf "expected association type in json payload: %s"
         (Yojson.Safe.to_string json)
-
-
 
   type event = order_event [@@deriving sexp]
 
@@ -162,7 +168,7 @@ let order_event_of_yojson :
     = fun _ -> failwith "event_to_yojson: unsupported"
 
   let event_of_yojson :
-    Yojson.Safe.json -> (event,string) Result.t = function
+    Yojson.Safe.json -> (event, string) Result.t = function
     | `Assoc assoc as json ->
       (List.Assoc.find assoc ~equal:String.equal
          "type" |> function
@@ -170,9 +176,11 @@ let order_event_of_yojson :
          Result.failf "no event type in json payload: %s"
            (Yojson.Safe.to_string json)
        | Some event_type ->
-         Event_type.of_yojson event_type |> function
+        Event_type.of_yojson event_type |> function
          | Result.Error _ as e -> e
          | Result.Ok event_type ->
+           Log.Global.debug "event_of_yojson: event_type=%s"
+             (Event_type.to_string event_type);
            let json' = `Assoc
                (List.Assoc.remove ~equal:String.equal assoc "type") in
            (match event_type with
@@ -180,31 +188,35 @@ let order_event_of_yojson :
               order_event_of_yojson json'
            )
       )
+    | (`List l : Yojson.Safe.json) ->
+      Result.(all (List.map l ~f:order_event_of_yojson) |>
+              map ~f:(fun x -> `Events x)
+             )
     | #Yojson.Safe.json as json ->
       Result.failf "expected association type in json payload: %s"
         (Yojson.Safe.to_string json)
 
 
-  type update =
+  type _update =
     { event_id : int_number [@key "eventId"];
       events : event array;
       timestamp : Timestamp.sec option [@default None];
       timestampms : Timestamp.ms option [@default None]
     } [@@deriving sexp, yojson]
 
-  type message =
-    [`Heartbeat of heartbeat | `Update of update] [@@deriving sexp]
+  type _message =
+    [`Heartbeat of heartbeat | `Update of _update] [@@deriving sexp]
 
-  type response =
+  type response = event [@@deriving sexp, yojson] (*=
     {
       socket_sequence : int_number;
       message : message
     } [@@deriving sexp]
-
-  let response_to_yojson : response -> Yojson.Safe.json =
+*)
+  let _response_to_yojson : response -> Yojson.Safe.json =
     fun _ -> failwith "response_to_yojson: unsupported"
-
-  let response_of_yojson :
+(*
+  let _response_of_yojson :
     Yojson.Safe.json -> (response, string) Result.t = function
     | `Assoc assoc as json ->
       (
@@ -244,10 +256,10 @@ let order_event_of_yojson :
             )
       )
     | #Yojson.Safe.json as json ->
-      Result.failf "response_of_yojson:expected association type \
+      Result.failf "response_of_yojson: expected association type \
                     in json payload: %s"
         (Yojson.Safe.to_string json)
-
+*)
 end
 include T
 include Ws.Make(T)
