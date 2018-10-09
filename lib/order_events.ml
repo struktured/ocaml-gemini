@@ -25,7 +25,8 @@ module T = struct
     failwith "uri path arguments not support for order events"
 
   type request =
-    { heartbeat : bool option [@default None] } [@@deriving sexp, yojson]
+    { heartbeat : bool option [@default None] }
+  [@@deriving sexp, yojson]
 
   module Message_type = struct
     module T = struct
@@ -38,7 +39,13 @@ module T = struct
     include Json.Make(T)
   end
 
-  module Event_type = struct
+  type heartbeat = {timestampms:Timestamp.ms;
+                    sequence:int_number;
+                    trace_id:string;
+                    socket_sequence:int_number
+                   } [@@deriving sexp, yojson]
+
+ module Event_type = struct
     module T = struct
 
       type t = [ `Subscription_ack
@@ -81,9 +88,7 @@ module T = struct
       | `Api_session_filter session ->
         "apiSessionFilter", session
 
-  type heartbeat = unit [@@deriving sexp, yojson]
-
-  module Reason = struct
+   module Reason = struct
     module T = struct
       type t =
         [`Place | `Trade | `Cancel | `Initial] [@@deriving sexp, enumerate]
@@ -127,8 +132,13 @@ type subscription_ack =
   } [@@deriving sexp, yojson]
 
 type order_event =
-  [`Subscription_ack of subscription_ack |
-   `Events of order_event list] [@@deriving sexp]
+  [ `Subscription_ack of subscription_ack
+  | `Heartbeat of heartbeat
+  | `Events of order_event list
+  ] [@@deriving sexp]
+
+let order_event_to_yojson _ = failwith "nyi"
+
 
 let rec order_event_of_yojson :
     Yojson.Safe.json -> (order_event, string) Result.t = function
@@ -136,17 +146,24 @@ let rec order_event_of_yojson :
       (List.Assoc.find assoc ~equal:String.equal
          "type" |> function
        | None ->
+         Log.Global.debug "no type in event payload:%s"
+           (Yojson.Safe.to_string json);
          subscription_ack_of_yojson json |>
          Result.map ~f:(fun event -> `Subscription_ack event);
 (*         Result.failf "no order event type in json payload: %s"
            (Yojson.Safe.to_string json)*)
        | Some event_type ->
-         Event_type.of_yojson event_type |> function
+         Log.Global.debug "found type in event payload:%s"
+           (Yojson.Safe.to_string json);
+          Event_type.of_yojson event_type |> function
          | Result.Error _ as e -> e
          | Result.Ok event_type ->
            let json' = `Assoc
                (List.Assoc.remove ~equal:String.equal assoc "type") in
            (match event_type with
+            | `Heartbeat ->
+              heartbeat_of_yojson json' |>
+              Result.map ~f:(fun event -> `Heartbeat event)
             | `Subscription_ack ->
               subscription_ack_of_yojson json' |>
               Result.map ~f:(fun event -> `Subscription_ack event)
@@ -162,8 +179,8 @@ let rec order_event_of_yojson :
       Result.failf "expected association type in json payload: %s"
         (Yojson.Safe.to_string json)
 
-  type event = order_event [@@deriving sexp]
-
+  type event = order_event [@@deriving sexp, yojson]
+(*
   let event_to_yojson : event -> Yojson.Safe.json
     = fun _ -> failwith "event_to_yojson: unsupported"
 
@@ -195,7 +212,7 @@ let rec order_event_of_yojson :
     | #Yojson.Safe.json as json ->
       Result.failf "expected association type in json payload: %s"
         (Yojson.Safe.to_string json)
-
+*)
 
   type _update =
     { event_id : int_number [@key "eventId"];
