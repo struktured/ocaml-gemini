@@ -12,6 +12,9 @@ module V1 = struct
   module Timestamp = Timestamp
   module Market_data = Market_data
   module Order_events = Order_events
+  module Currency = Currency
+  module Order_type = Order_type
+
   module Heartbeat = struct
     module T = struct
       let name = "heartbeat"
@@ -22,32 +25,6 @@ module V1 = struct
     include T
     include Rest.Make_no_arg(T)
   end
-
-  module Currency = struct
-
-    module T = struct
-      type t = [`Eth | `Btc | `Usd | `Zec] [@@deriving sexp, enumerate]
-      let to_string = function
-        | `Eth -> "eth"
-        | `Btc -> "btc"
-        | `Usd -> "usd"
-        | `Zec -> "zec"
-    end
-    include T
-    include Json.Make(T)
-
-  end
-  module Order_type = struct
-    module T = struct
-      type t = [`Exchange_limit] [@@deriving sexp, enumerate]
-      let to_string = function
-        | `Exchange_limit -> "exchange limit"
-    end
-    include T
-    include Json.Make(T)
-
-  end
-
   module Order_execution_option = struct
 
     module T = struct

@@ -100,4 +100,30 @@ module Timestamp = struct
 
 end
 
+module Currency = struct
+
+  module T = struct
+    type t = [`Eth | `Btc | `Usd | `Zec] [@@deriving sexp, enumerate]
+    let to_string = function
+      | `Eth -> "eth"
+      | `Btc -> "btc"
+      | `Usd -> "usd"
+      | `Zec -> "zec"
+  end
+  include T
+  include Json.Make(T)
+
+end
+module Order_type = struct
+  module T = struct
+    type t = [`Exchange_limit] [@@deriving sexp, enumerate]
+    let to_string = function
+      | `Exchange_limit -> "exchange limit"
+  end
+  include T
+  include Json.Make(T)
+
+end
+
+
 let v1 = "v1"
