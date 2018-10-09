@@ -1,15 +1,18 @@
-opam-version: "1.2"
+opam-version: "2.0"
 maintainer: "Carmelo Piccione <carmelo.piccione@struktured.io>"
 authors: "Carmelo Piccione"
 homepage: "https://github.com/struktured/ocaml-gemini"
 license: "MIT"
+bug-reports: "https://github.com/struktured/ocaml-gemini/issues"
 
 build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 
 depends: [
-  "async" {>= "v0.10.0"}
+  "ocaml" {>= "4.07.0"}
+  "async" {>= "v0.11.0"}
+  "async_ssl"
   "cohttp-async"
   "dune" {build}
   "ppx_jane"
@@ -19,9 +22,5 @@ depends: [
   "zarith"
   "nocrypto"
   "ppx_deriving_yojson"
-  "ppx_deriving_yojson.runtime"
-]
-
-available: [
-  ocaml-version >= "4.06.0"
+  "expect_test_helpers" {build with-tests}
 ]
