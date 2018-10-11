@@ -45,8 +45,6 @@ module T = struct
   type query = unit [@@deriving sexp]
   let encode_query _ = failwith "queries not supported"
 
-  let extra_headers ?payload:_ (module Cfg: Cfg.S) = []
-
   type request =
     { heartbeat : bool option [@default None] } [@@deriving sexp, yojson]
 
