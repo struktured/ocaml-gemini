@@ -85,7 +85,7 @@ but will review and accept PRs when time permits.
 
 # TODO
 
-- order status web sockets api
-- fix unit test harness
-- document code
+- [ ] order status web sockets api
+- [x] fix unit test harness
+- [ ] document code
 
