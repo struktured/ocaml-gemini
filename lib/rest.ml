@@ -19,11 +19,8 @@ module Operation = struct
   module type S = sig
     val name : string
     val path : string list
-    type request [@@deriving sexp]
-    type response [@@deriving sexp]
-    val request_to_yojson : request -> Yojson.Safe.json
-    val response_of_yojson : Yojson.Safe.json ->
-      (response, string) Result.t
+    type request [@@deriving sexp, to_yojson]
+    type response [@@deriving sexp, of_yojson]
   end
 
   module type S_NO_ARG = sig
@@ -69,7 +66,7 @@ module Response = struct
   end
 
   type result_field =
-    {result:Json_result.t} [@@deriving yojson, sexp]
+    {result:Json_result.t} [@@deriving of_yojson, sexp]
 
   type t = {result:Json_result.t; payload:Yojson.Safe.json}
 

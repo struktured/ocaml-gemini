@@ -8,7 +8,7 @@ module type CHANNEL = sig
   val uri_args_to_string : uri_args -> string
   val default_uri_args : uri_args option
 
-  type response [@@deriving sexp, yojson]
+  type response [@@deriving sexp, of_yojson]
 
   type query [@@deriving sexp]
   val encode_query : query -> string * string

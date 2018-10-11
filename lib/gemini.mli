@@ -2,18 +2,12 @@ open Common
 module Auth = Auth
 module Result = Json.Result
 
-(*type int_number = int64 [@encoding `number] [@@deriving sexp, yojson]
-type int_string = int64 [@encoding `string] [@@deriving sexp, yojson]
-type decimal_number = float [@encoding `number] [@@deriving sexp, yojson]
-type decimal_string = string [@@deriving sexp, yojson]
-*)
-
 module V1 : sig
   val path : string list
   module Heartbeat :
     sig
       type request = unit [@@deriving sexp, yojson]
-      type response = { result : bool; } [@@deriving sexp, yojson]
+      type response = { result : bool; } [@@deriving sexp, of_yojson]
       val post :
         (module Cfg.S) ->
         Nonce.reader ->
@@ -94,7 +88,7 @@ module V1 : sig
           options : Order_execution_option.t list;
           price : decimal_string;
           original_amount : decimal_string;
-        } [@@deriving sexp, yojson]
+        } [@@deriving sexp, of_yojson]
         val post :
           (module Cfg.S) ->
           Nonce.reader ->
@@ -118,7 +112,7 @@ module V1 : sig
             type_ : Order_type.t;
             options : Order_execution_option.t list;
           } [@@deriving sexp, yojson]
-          type response = Status.response [@@deriving sexp, yojson]
+          type response = Status.response [@@deriving sexp, of_yojson]
           val post :
             (module Cfg.S) ->
             Nonce.reader ->
@@ -139,7 +133,7 @@ module V1 : sig
               val path : string list
               type request =
                 { order_id : int_string; } [@@deriving sexp, yojson]
-              type response = Status.response [@@deriving sexp, yojson]
+              type response = Status.response [@@deriving sexp, of_yojson]
               val post :
                 (module Cfg.S) ->
                 Nonce.reader ->
@@ -160,7 +154,7 @@ module V1 : sig
               val path : string list
               type request = unit [@@deriving sexp, yojson]
               type response =
-                { details : details; } [@@deriving sexp, yojson]
+                { details : details; } [@@deriving sexp, of_yojson]
               val post :
                 (module Cfg.S) ->
                 Nonce.reader ->
@@ -176,7 +170,7 @@ module V1 : sig
               val name : string
               val path : string list
               type request = unit [@@deriving sexp, yojson]
-              type response = { details : details; } [@@deriving sexp, yojson]
+              type response = { details : details; } [@@deriving sexp, of_yojson]
               val post :
                 (module Cfg.S) ->
                 Nonce.reader ->
@@ -196,7 +190,7 @@ module V1 : sig
       val name : string
       val path : string list
       type request = unit [@@deriving sexp, yojson]
-      type response = Order.Status.response list [@@deriving sexp, yojson]
+      type response = Order.Status.response list [@@deriving sexp, of_yojson]
       val post :
         (module Cfg.S) ->
         Nonce.reader ->
@@ -231,7 +225,7 @@ module V1 : sig
         limit_trades : int option;
         timestamp : Timestamp.sec option;
       } [@@deriving sexp, yojson]
-      type response = trade list [@@deriving sexp, yojson]
+      type response = trade list [@@deriving sexp, of_yojson]
       val post :
         (module Cfg.S) ->
         Nonce.reader ->
@@ -268,7 +262,7 @@ module V1 : sig
       val name : string
       val path : string list
       type request = unit [@@deriving sexp, yojson]
-      type response = volume list list [@@deriving sexp, yojson]
+      type response = volume list list [@@deriving sexp, of_yojson]
       val post :
         (module Cfg.S) ->
         Nonce.reader ->
@@ -292,7 +286,7 @@ module V1 : sig
         available_for_withdrawal : decimal_string;
         type_ : string;
       } [@@deriving sexp, yojson]
-      type response = balance list [@@deriving sexp, yojson]
+      type response = balance list [@@deriving sexp, of_yojson]
       val post :
         (module Cfg.S) ->
         Nonce.reader ->
@@ -343,7 +337,7 @@ module V1 : sig
         val to_string : [< t ] -> string
       end
 
-      type heartbeat = unit [@@deriving sexp, yojson]
+      type heartbeat = unit [@@deriving sexp, of_yojson]
 
       module Reason : sig
         type t =
@@ -358,21 +352,21 @@ module V1 : sig
         reason : Reason.t;
         remaining : decimal_string;
         delta : decimal_string;
-      } [@@deriving sexp, yojson]
+      } [@@deriving sexp, of_yojson]
 
       type trade_event = {
         tid : int_number;
         price : decimal_string;
         amount : decimal_string;
         maker_side : Side.t;
-      } [@@deriving sexp, yojson]
+      } [@@deriving sexp, of_yojson]
 
       type auction_open_event = {
         auction_open_ms : Timestamp.ms;
         auction_time_ms : Timestamp.ms;
         first_indicative_ms : Timestamp.ms;
         last_cancel_time_ms : Timestamp.ms;
-      } [@@deriving sexp, yojson]
+      } [@@deriving sexp, of_yojson]
 
       module Auction_result :
       sig
@@ -401,7 +395,7 @@ module V1 : sig
         collar_price : decimal_string;
         auction_price : decimal_string;
         auction_quantity : decimal_string;
-      } [@@deriving sexp, yojson]
+      } [@@deriving sexp, of_yojson]
 
       module Auction_event_type :
       sig
@@ -417,20 +411,20 @@ module V1 : sig
           [ `Auction_indicative_price of auction_indicative_price_event
           | `Auction_open of auction_open_event
           | `Auction_outcome of auction_outcome_event ]
-      [@@deriving sexp, yojson]
+      [@@deriving sexp, of_yojson]
 
       type event =
           [ `Auction of auction_event
           | `Change of change_event
           | `Trade of trade_event ]
-      [@@deriving sexp, yojson]
+      [@@deriving sexp, of_yojson]
 
       type update = {
         event_id : int_number;
         events : event array;
         timestamp : Timestamp.sec option;
         timestampms : Timestamp.ms option;
-      } [@@deriving sexp, yojson]
+      } [@@deriving sexp, of_yojson]
 
       type message =
         [ `Heartbeat of heartbeat | `Update of update ]
@@ -439,7 +433,7 @@ module V1 : sig
       type response = {
         socket_sequence : int_number;
         message : message;
-      } [@@deriving sexp, yojson]
+      } [@@deriving sexp, of_yojson]
 
 
     val client :

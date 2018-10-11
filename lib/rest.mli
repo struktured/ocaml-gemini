@@ -20,11 +20,8 @@ module Operation : sig
   module type S = sig
     val name : string
     val path : string list
-    type request [@@deriving sexp]
-    type response [@@deriving sexp]
-    val request_to_yojson : request -> Yojson.Safe.json
-    val response_of_yojson : Yojson.Safe.json ->
-      (response, string) Result.t
+    type request [@@deriving sexp, to_yojson]
+    type response [@@deriving sexp, of_yojson]
   end
 
   module type S_NO_ARG = sig
@@ -48,7 +45,7 @@ sig
       (t option * [> Yojson.Safe.json ], string) result
   end
   type result_field =
-    { result : Json_result.t; } [@@deriving sexp, yojson]
+    { result : Json_result.t; } [@@deriving sexp, of_yojson]
   type t =
     { result : Json_result.t; payload : Yojson.Safe.json; }
   val parse :

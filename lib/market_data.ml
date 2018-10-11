@@ -75,7 +75,7 @@ module T = struct
     include Json.Make(T)
   end
 
-  type heartbeat = unit [@@deriving sexp, yojson]
+  type heartbeat = unit [@@deriving sexp, of_yojson]
 
   module Reason = struct
     module T = struct
@@ -97,21 +97,21 @@ module T = struct
      reason:Reason.t;
      remaining:decimal_string;
      delta:decimal_string
-    } [@@deriving sexp, yojson]
+    } [@@deriving sexp, of_yojson]
 
   type trade_event =
     {tid:int_number;
      price:decimal_string;
      amount:decimal_string;
      maker_side:Side.t [@key "makerSide"]
-    } [@@deriving yojson, sexp]
+    } [@@deriving of_yojson, sexp]
 
   type auction_open_event =
     {auction_open_ms:Timestamp.ms;
      auction_time_ms:Timestamp.ms;
      first_indicative_ms:Timestamp.ms;
      last_cancel_time_ms:Timestamp.ms
-    } [@@deriving sexp, yojson]
+    } [@@deriving sexp, of_yojson]
 
 
   module Auction_result = struct
@@ -147,7 +147,7 @@ module T = struct
      collar_price:decimal_string;
      auction_price:decimal_string;
      auction_quantity:decimal_string
-    } [@@deriving sexp, yojson]
+    } [@@deriving sexp, of_yojson]
 
   module Auction_event_type = struct
     module T = struct
@@ -176,10 +176,6 @@ module T = struct
           auction_indicative_price_event
       | `Auction_outcome of auction_outcome_event
     ] [@@deriving sexp]
-
-  let auction_event_to_yojson :
-    auction_event -> Yojson.Safe.json = fun _ ->
-    failwith "auction_event_to_yojson: unsupported"
 
   let auction_event_of_yojson :
     Yojson.Safe.json -> (auction_event, string) Result.t = function
@@ -218,9 +214,6 @@ module T = struct
     | `Auction of auction_event
     ] [@@deriving sexp]
 
-  let event_to_yojson : event -> Yojson.Safe.json
-    = fun _ -> failwith "event_to_yojson: unsupported"
-
   let event_of_yojson :
     Yojson.Safe.json -> (event,string) Result.t = function
     | `Assoc assoc as json ->
@@ -257,7 +250,7 @@ module T = struct
       events : event array;
       timestamp : Timestamp.sec option [@default None];
       timestampms : Timestamp.ms option [@default None]
-    } [@@deriving sexp, yojson]
+    } [@@deriving sexp, of_yojson]
 
   type message =
     [`Heartbeat of heartbeat | `Update of update] [@@deriving sexp]
@@ -267,9 +260,6 @@ module T = struct
       socket_sequence : int_number;
       message : message
     } [@@deriving sexp]
-
-  let response_to_yojson : response -> Yojson.Safe.json =
-    fun _ -> failwith "response_to_yojson: unsupported"
 
   let response_of_yojson :
     Yojson.Safe.json -> (response, string) Result.t = function

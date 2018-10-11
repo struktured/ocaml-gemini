@@ -167,8 +167,6 @@ type response =
   | `Order_events of order_event list
   ] [@@deriving sexp]
 
-let response_to_yojson _ = failwith "nyi"
-
 
 let response_of_yojson :
     Yojson.Safe.json -> ('a, string) Result.t = function

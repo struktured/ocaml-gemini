@@ -20,7 +20,7 @@ module V1 = struct
       let name = "heartbeat"
       let path = path@["heartbeat"]
       type request = unit [@@deriving sexp, yojson]
-      type response = {result:bool [@default true]} [@@deriving sexp, yojson]
+      type response = {result:bool [@default true]} [@@deriving sexp, of_yojson]
     end
     include T
     include Rest.Make_no_arg(T)
@@ -103,7 +103,7 @@ module V1 = struct
           options: Order_execution_option.t list;
         } [@@deriving sexp, yojson]
 
-        type response = Status.response [@@deriving yojson, sexp]
+        type response = Status.response [@@deriving of_yojson, sexp]
       end
       include T
       include Rest.Make(T)
@@ -121,7 +121,7 @@ module V1 = struct
 
           type request = {order_id:int_string} [@@deriving sexp, yojson]
 
-          type response = Status.response [@@deriving sexp, yojson]
+          type response = Status.response [@@deriving sexp, of_yojson]
         end
         include T
         include Rest.Make(T)
@@ -137,7 +137,7 @@ module V1 = struct
           let path = path@["all"]
           type request = unit [@@deriving sexp, yojson]
 
-          type response = {details:details} [@@deriving sexp, yojson]
+          type response = {details:details} [@@deriving sexp, of_yojson]
         end
         include T
         include Rest.Make_no_arg(T)
@@ -148,7 +148,7 @@ module V1 = struct
           let name = "session"
           let path = path@["session"]
           type request = unit [@@deriving sexp, yojson]
-          type response = {details:details} [@@deriving sexp, yojson]
+          type response = {details:details} [@@deriving sexp, of_yojson]
         end
         include T
         include Rest.Make_no_arg(T)
@@ -185,7 +185,7 @@ module V1 = struct
 
       type request = unit [@@deriving sexp, yojson]
       type response =
-        Order.Status.response list [@@deriving yojson, sexp]
+        Order.Status.response list [@@deriving of_yojson, sexp]
     end
     include T
     include Rest.Make_no_arg(T)
@@ -215,7 +215,7 @@ module V1 = struct
           limit_trades: int option [@default None];
           timestamp: Timestamp.sec option [@default None]
         } [@@deriving sexp, yojson]
-      type response = trade list [@@deriving yojson, sexp]
+      type response = trade list [@@deriving of_yojson, sexp]
     end
     include T
     include Rest.Make(T)
@@ -249,7 +249,7 @@ module V1 = struct
       let name = "tradevolume"
       let path = path@["tradevolume"]
       type request = unit [@@deriving yojson, sexp]
-      type response = volume list list [@@deriving yojson, sexp]
+      type response = volume list list [@@deriving of_yojson, sexp]
     end
     include T
     include Rest.Make_no_arg(T)
@@ -270,7 +270,7 @@ module V1 = struct
              [@key "availableForWithdrawal"];
          type_: string [@key "type"]
         } [@@deriving yojson, sexp]
-      type response = balance list [@@deriving yojson, sexp]
+      type response = balance list [@@deriving of_yojson, sexp]
     end
 
     include T
