@@ -88,4 +88,5 @@ but will review and accept PRs when time permits.
 - [x] order status web sockets api
 - [x] fix unit test harness
 - [ ] document code
+- [ ] make opam release
 
