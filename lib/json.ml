@@ -1,5 +1,3 @@
-
-
 module Result = struct
   include Result
   let both x y : (('a * 'b), 'error) t =
@@ -12,6 +10,7 @@ module Result = struct
     | Result.Error _ as e -> e
 
 end
+
 module type ENUM_STRING = sig
   type t [@@deriving enumerate]
   val to_string : t -> string
