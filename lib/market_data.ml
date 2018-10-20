@@ -1,5 +1,4 @@
 open Common
-let path = [v1]
 module Side =
 struct
   module Bid_ask = struct
@@ -35,7 +34,8 @@ end
 
 module T = struct
   let name = "marketdata"
-  let path = path@["marketdata"]
+  let version = "v1"
+  let path = v1::["marketdata"]
   type uri_args = Symbol.t [@@deriving sexp, yojson, enumerate]
 
   let authentication = `Public

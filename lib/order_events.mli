@@ -3,7 +3,6 @@ open Common
 module Request = Nonce.Request
 type uri_args = [`None] [@@deriving sexp, enumerate]
 
-
 type request =
   { heartbeat : bool option [@default None] }
 [@@deriving sexp, yojson]
@@ -107,14 +106,14 @@ type response =
   ] [@@deriving sexp]
 
 
-
 val handle_client :
   [< Socket.Address.t ] -> Reader.t -> Writer.t -> unit Deferred.t
 val command : decimal_string * Async.Command.t
+
 val client :
   nonce:int Pipe.Reader.t ->
   (module Cfg.S) ->
-  ?query:Sexp.t sexp_list ->
+  ?query:Sexp.t list ->
   ?uri_args:uri_args ->
-  unit -> (unit * unit) Async_extra__.Import.Deferred.t
+  unit -> (unit * unit) Deferred.t
 

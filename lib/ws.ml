@@ -1,6 +1,7 @@
 
 module type CHANNEL = sig
   val name : string
+  val version : string
   val path : string list
 
   val authentication : [`Private | `Public]
@@ -207,7 +208,9 @@ let command =
   in
   Channel.name,
   Command.async_spec
-    ~summary:(sprintf "Gemini %s Websocket Command" Channel.name) spec run
+    ~summary:(sprintf "Gemini %s %s Websocket Command"
+                Channel.version Channel.name
+             ) spec run
 end
 
 module Make_no_request(Channel:CHANNEL) =

@@ -1,21 +1,10 @@
 open Common
-let path = [v1]
-(*
-type payload =
-{
-"request": "/v1/order/events",
-"nonce": 123456
-} [@@deriving sexp, yojson]
-*)
-(*
-{\"type\":\"subscription_ack\",\"accountId\":180909,\"subscriptionId\":\"ws-order-events-180909-b67k8l8pfre12r26pvtg\",\"symbolFilter\":[],\"apiSessionFilter\":[],\"eventTypeFilter\":[]}")
-*)
-
 module Request = Nonce.Request
 
 module T = struct
-  let name = "order-events"
-  let path = path@["order";"events"]
+  let name = "orderevents"
+  let version = v1
+  let path = version::["order";"events"]
   type uri_args = [`None] [@@deriving sexp, enumerate]
 
   let authentication = `Private
