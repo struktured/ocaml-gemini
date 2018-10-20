@@ -1,4 +1,3 @@
-
 module Error = struct
   type http = [ `Bad_request of string
               | `Not_found
@@ -20,53 +19,19 @@ module Operation = struct
   module type S = sig
     val name : string
     val path : string list
-    type request [@@deriving sexp]
-    type response [@@deriving sexp]
-    val request_to_yojson : request -> Yojson.Safe.json
-    val response_of_yojson : Yojson.Safe.json ->
-      (response, string) Result.t
+    type request [@@deriving sexp, to_yojson]
+    type response [@@deriving sexp, of_yojson]
   end
 
   module type S_NO_ARG = sig
     include S with type request = unit
   end
 
-  type status= [`Ok | `Error of string]
+  type status = [`Ok | `Error of string]
 
 end
 
-module Request = struct
-
-  type request_nonce =
-    {request:string; nonce:int} [@@deriving sexp, yojson]
-
-  type t =
-    {request:string; nonce:int; payload:Yojson.Safe.json}
-
-  let make ~request ~nonce payload =
-    Pipe.read nonce >>= function
-    | `Ok nonce ->
-      return
-        {request;nonce;payload}
-    | `Eof -> assert false
-
-  let to_yojson {request;nonce;payload} : Yojson.Safe.json =
-    match request_nonce_to_yojson {request;nonce} with
-    | `Assoc assoc ->
-      (match payload with
-       | `Null -> `Assoc assoc
-       | `Assoc assoc' ->
-         `Assoc (assoc @ assoc')
-       | #Yojson.Safe.json as unsupported_yojson ->
-         failwithf "expected json association for request payload but got %S"
-           (Yojson.Safe.to_string unsupported_yojson) ()
-      )
-    | #Yojson.Safe.json as unsupported_yojson ->
-      failwithf "expected json association for type request_nonce but got %S"
-        (Yojson.Safe.to_string unsupported_yojson) ()
-
-end
-
+module Request = Nonce.Request
 
 module Response = struct
 
@@ -101,24 +66,9 @@ module Response = struct
   end
 
   type result_field =
-    {result:Json_result.t} [@@deriving yojson, sexp]
+    {result:Json_result.t} [@@deriving of_yojson, sexp]
 
   type t = {result:Json_result.t; payload:Yojson.Safe.json}
-
-  let to_yojson {result;payload} : Yojson.Safe.json =
-    match result_field_to_yojson {result} with
-    | `Assoc assoc ->
-      (match payload with
-       | `Null -> `Assoc assoc
-       | `Assoc assoc' ->
-         `Assoc (assoc @ assoc')
-       | #Yojson.Safe.json as unsupported_yojson ->
-         failwithf "expected json association for response payload but got %S"
-           (Yojson.Safe.to_string unsupported_yojson) ()
-      )
-    | #Yojson.Safe.json as unsupported_yojson ->
-      failwithf "expected json association for type result_field but got %S"
-        (Yojson.Safe.to_string unsupported_yojson) ()
 
 
   let parse json ok_of_yojson =
@@ -170,7 +120,7 @@ struct
       Operation.request_to_yojson request in
     let path = Path.to_string Operation.path in
      Request.make ~nonce
-      ~request:path payload >>=
+      ~request:path ~payload () >>=
     fun request ->
     (Request.to_yojson request |>
      Yojson.Safe.pretty_to_string |>
@@ -179,20 +129,7 @@ struct
      return @@ Auth.of_payload s
     )
     >>= fun payload ->
-    let headers =
-      Cohttp.Header.of_list
-        ["Content-Type", "text/plain";
-         "Content-Length", "0";
-         "Cache-Control", "no-cache";
-         "X-GEMINI-PAYLOAD", Auth.to_string payload;
-         "X-GEMINI-APIKEY", Cfg.api_key;
-         "X-GEMINI-SIGNATURE",
-         Auth.(
-           hmac_sha384 ~api_secret:Cfg.api_secret payload |>
-           to_string
-         )
-        ]
-    in
+    let headers = Auth.to_headers (module Cfg) payload in
     let uri = Uri.make
         ~scheme:"https"
         ~host:Cfg.api_host
@@ -233,10 +170,6 @@ struct
         code Cohttp.Code.sexp_of_status_code
 end
 
-let nonce_file =
-  let root_path = Unix.getenv_exn "HOME" in
-  sprintf "%s/.gemini/nonce.txt" root_path
-
 
 module Make(Operation:Operation.S) =
 struct
@@ -255,7 +188,8 @@ struct
            Log.Global.info "request:\n %s"
              (Operation.sexp_of_request request |> Sexp.to_string);
            let config = Cfg.get config in
-           Nonce.File.pipe ~init:nonce_file () >>= fun nonce ->
+           Nonce.File.(pipe ~init:default_filename)
+             () >>= fun nonce ->
            post config nonce request >>= function
            | `Ok response ->
              Log.Global.info "response:\n %s"
@@ -289,7 +223,7 @@ struct
          fun () ->
            let request = () in
            let config = Cfg.get config in
-           Nonce.File.pipe ~init:nonce_file () >>= fun nonce ->
+           Nonce.File.(pipe ~init:default_filename) () >>= fun nonce ->
            post config nonce request >>= function
            | `Ok response ->
              Log.Global.info "response:\n %s"
@@ -308,5 +242,3 @@ struct
     )
 
 end
-
-

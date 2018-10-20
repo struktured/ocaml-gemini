@@ -1,23 +1,48 @@
+
 module type CHANNEL = sig
   val name : string
+  val version : string
   val path : string list
 
+  val authentication : [`Private | `Public]
   type uri_args [@@deriving sexp, enumerate]
   val uri_args_to_string : uri_args -> string
-  type response [@@deriving sexp, yojson]
+  val default_uri_args : uri_args option
 
+  type response [@@deriving sexp, of_yojson]
+
+  type query [@@deriving sexp]
+  val encode_query : query -> string * string
 end
 
-module Make(Channel:CHANNEL) = struct
-let client (module Cfg : Cfg.S) ?protocol ?extensions uri_args =
+module Impl(Channel : CHANNEL) =
+struct
+
+let client (module Cfg : Cfg.S)
+    ?query ?uri_args ?nonce
+    () =
+  let query =
+    Option.map query
+      ~f:
+        (fun l -> List.fold ~init:String.Map.empty l
+           ~f:(fun map q ->
+               let key, data =
+                 Channel.encode_query (Channel.query_of_sexp q) in
+               String.Map.add_multi map ~key ~data
+              )
+        |> fun map ->
+        let keys = String.Map.keys map in
+        List.map keys ~f:(fun k -> k, String.Map.find_multi map k)
+        ) in
   let uri = Uri.make
       ~host:Cfg.api_host
       ~scheme:"https"
+      ?query
       ~path:
         (String.concat ~sep:"/"
            (Channel.path
             @
-            [(Channel.uri_args_to_string uri_args)]
+            Option.(map ~f:(Channel.uri_args_to_string) uri_args |> to_list)
            )
         )
       ()
@@ -36,26 +61,37 @@ let client (module Cfg : Cfg.S) ?protocol ?extensions uri_args =
        (Unix.Inet_addr.of_string_or_getbyname host >>|
         Ipaddr_unix.of_inet_addr
        ) >>= fun addr ->
-       Conduit_async.connect
-         (`OpenSSL_with_config (
-             "wss",
-             addr,
-             port,
-             (Conduit_async.Ssl.configure ~version:Tlsv1_2 ())
-           )
+       Conduit_async.
+         (connect
+            (`OpenSSL_with_config
+               (
+                 "wss",
+                 addr,
+                 port,
+                 Ssl.configure ~version:Tlsv1_2 ()
+               )
+            )
          )
-     else return (r, w)) >>= fun (r, w) ->
-    let extra_headers = Cohttp.Header.init () in
-    let extra_headers = Option.value_map protocol ~default:extra_headers
-        ~f:(fun proto ->
-            Cohttp.Header.add
-              extra_headers "Sec-Websocket-Protocol" proto)
-    in
-    let extra_headers = Option.value_map extensions ~default:extra_headers
-        ~f:(fun exts ->
-            Cohttp.Header.add
-              extra_headers "Sec-Websocket-Extensions" exts)
-    in
+     else return (r, w)
+    ) >>= fun (r, w) ->
+    let payload = `Null in
+    let path = Path.to_string Channel.path in
+    let%bind payload =
+      match nonce with
+      | None -> return None
+      | Some nonce ->
+      Nonce.Request.
+        (make ~nonce ~request:path ~payload () >>|
+         to_yojson
+        )
+      >>| fun s -> Yojson.Safe.to_string s |> Option.some in
+    let extra_headers =
+      (match Channel.authentication with
+      | `Private ->
+        Option.map ~f:(fun p -> Auth.(to_headers (module Cfg) (of_payload p))) payload
+      | `Public -> None
+      )
+      |> Option.value ~default:(Cohttp.Header.init ()) in
     let r, w = Websocket_async.client_ez
         ~extra_headers
         ~log:Lazy.(force Log.Global.log)
@@ -143,29 +179,48 @@ let command =
     let open Command.Spec in
     empty
     +> Cfg.param
-    +> flag "-protocol" (optional string)
-      ~doc:"str websocket protocol header"
-    +> flag "-extensions" (optional string)
-      ~doc:"str websocket extensions header"
     +> flag "-loglevel" (optional int) ~doc:"1-3 loglevel"
-    +> anon ("uri_args" %: sexp)
-  in
+    +> flag "-query" (listed sexp) ~doc:"str query parameters"
+    +> anon (maybe ("uri_args" %: sexp))
+ in
   let set_loglevel = function
     | 2 -> Log.Global.set_level `Info
     | 3 -> Log.Global.set_level `Debug
     | _ -> ()
   in
   let run cfg
-      protocol extensions loglevel uri_args () =
+      loglevel query uri_args () =
     let cfg = Cfg.get cfg in
     let module Cfg = (val cfg:Cfg.S) in
     Option.iter loglevel ~f:set_loglevel;
-    let uri_args = Channel.uri_args_of_sexp uri_args in
-    client (module Cfg) ?protocol ?extensions uri_args >>= fun _ ->
+    let uri_args =
+      Option.first_some
+        (Option.map ~f:Channel.uri_args_of_sexp uri_args)
+        Channel.default_uri_args in
+    let query = match List.is_empty query with
+      | true -> None
+      | false -> Some query in
+    let%bind nonce =
+      Nonce.File.(pipe ~init:default_filename) () in
+    client (module Cfg)
+      ?query ?uri_args ~nonce () >>= fun _ ->
     Deferred.unit
   in
   Channel.name,
   Command.async_spec
-    ~summary:(sprintf "Gemini %s Websocket Command" Channel.name) spec run
+    ~summary:(sprintf "Gemini %s %s Websocket Command"
+                Channel.version Channel.name
+             ) spec run
 end
 
+module Make_no_request(Channel:CHANNEL) =
+struct
+  include Impl(Channel)
+  let client = client ?nonce:None
+end
+
+module Make(Channel:CHANNEL) =
+struct
+  include Impl(Channel)
+  let client ~nonce = client ~nonce
+end

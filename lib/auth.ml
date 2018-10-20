@@ -12,4 +12,14 @@ let to_string : [<t] -> string = function
   | `Base64 cstruct -> Cstruct.to_string cstruct
   | `Hex hex -> hex
 
-
+let to_headers (module Cfg:Cfg.S) t =
+  Cohttp.Header.of_list
+    ["Content-Type", "text/plain";
+     "Content-Length", "0";
+     "Cache-Control", "no-cache";
+     "X-GEMINI-PAYLOAD", to_string t;
+     "X-GEMINI-APIKEY", Cfg.api_key;
+     "X-GEMINI-SIGNATURE",
+     hmac_sha384 ~api_secret:Cfg.api_secret t |>
+     to_string
+    ]

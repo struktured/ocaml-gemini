@@ -16,7 +16,7 @@ let request_str =
 let hex_encoding_test () =
   let hex = Auth.of_payload request_str in
   printf "%s" (Auth.to_string hex);
-  Deferred.unit
+  ()
 
 
 let hmac384_encrypting_test () =
@@ -24,13 +24,12 @@ let hmac384_encrypting_test () =
   let hmac = Auth.hmac_sha384 ~api_secret hex in
   let str = Auth.to_string hmac in
   printf "%s" str;
-  Deferred.unit
-
+  ()
 
 let%expect_test "hex encoding" =
-  hex_encoding_test () >>= fun () ->
-  [%expect "ewogICAgICJyZXF1ZXN0IjogIi92MS9vcmRlci9zdGF0dXMiLAogICAgICJub25jZSI6IDEyMzQ1NiwKCiAgICAgIm9yZGVyX2lkIjogMTg4MzQKfQo=-"]
+  hex_encoding_test () |> fun () ->
+  [%expect "ewogICAgICJyZXF1ZXN0IjogIi92MS9vcmRlci9zdGF0dXMiLAogICAgICJub25jZSI6IDEyMzQ1NiwKCiAgICAgIm9yZGVyX2lkIjogMTg4MzQKfQo="]
 
 let%expect_test "hmac384 encrypting" =
-  hmac384_encrypting_test () >>= fun () ->
-  [%expect "337cc8b4ea692cfe65b4a85fcc9f042b2e3f702ac956fd098d600ab15705775017beae402be773ceee10719ff70d710f"]
+  hmac384_encrypting_test () |> fun () ->
+  [%expect "aceaacbe56beb3b08c9f1b4bfd099cc523f8c15b36ccd0fdcf823e71ea6ff413b5a1de251cfab9c3c0e863739d76368f"]
