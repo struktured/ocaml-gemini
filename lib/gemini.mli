@@ -32,7 +32,10 @@ module V1 : sig
   module Symbol :
     sig
       type t =
-        [ `Btcusd | `Ethbtc | `Ethusd | `Zecusd | `Zecbtc | `Zeceth]
+        [ `Btcusd | `Ethusd | `Ethbtc
+        | `Zecusd | `Zecbtc | `Zeceth
+        | `Ltcusd | `Ltcbtc | `Ltceth
+        ]
       [@@deriving sexp, yojson, enumerate]
       val to_string : [< t] -> string
     end

@@ -24,16 +24,24 @@ end
 
 module Symbol = struct
   module T = struct
-   type t =
-     [`Btcusd | `Ethusd | `Ethbtc | `Zecusd | `Zecbtc | `Zeceth]
-   [@@deriving sexp, enumerate]
-   let to_string : [<t] -> string = function
+    type t =
+      [ `Btcusd | `Ethusd | `Ethbtc
+      | `Zecusd | `Zecbtc | `Zeceth
+      | `Ltcusd | `Ltcbtc | `Ltceth
+      ]
+    [@@deriving sexp, enumerate]
+
+    let to_string : [<t] -> string = function
       | `Btcusd -> "btcusd"
       | `Ethusd -> "ethusd"
       | `Ethbtc -> "ethbtc"
       | `Zecusd -> "zecusd"
       | `Zecbtc -> "zecbtc"
       | `Zeceth -> "zeceth"
+      | `Ltcusd -> "ltcusd"
+      | `Ltcbtc -> "ltcbtc"
+      | `Ltceth -> "ltceth"
+
 
   end
   include T
