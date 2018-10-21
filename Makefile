@@ -13,3 +13,6 @@ clean :
 
 test: build
 	dune build @runtest
+
+.PHONY:
+	clean test build
