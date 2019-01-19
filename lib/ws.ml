@@ -1,23 +1,53 @@
 
+
+(** Specification for a websocket channel. *)
 module type CHANNEL = sig
+  (** The name of the channel *)
   val name : string
+
+  (** The channel protocol version *)
   val version : string
+
+  (** The uri path for this channel *)
   val path : string list
 
+  (** Authentication syle for this channel. One of
+      [`Private] or [`Public]
+  *)
   val authentication : [`Private | `Public]
+
+  (** Uri arguments which are appended to the end of
+      the path segment *)
   type uri_args [@@deriving sexp, enumerate]
+
+  (** Encder from well typed uri arguments to a string
+      suitable for a uri.
+  *)
   val uri_args_to_string : uri_args -> string
+
+  (** Defaut uri arguments. Optional for some channels. *)
   val default_uri_args : uri_args option
 
+  (** Repsone type of the channel. Must have sexp converters
+      and a yojson parser *)
   type response [@@deriving sexp, of_yojson]
 
+  (** Query parameters for the channel *)
   type query [@@deriving sexp]
+
+  (** Encodes queries as an http header key value pair *)
   val encode_query : query -> string * string
 end
 
+(** Creates a websocket implementation given a [Channel] *)
 module Impl(Channel : CHANNEL) =
 struct
 
+(** Establishes a web socket client given configuration [Cfg]
+    and optional [query], [uri_args] and [nonce] parameters.
+
+    Produces a pipe of [Channel.response] instances.
+*)
 let client (module Cfg : Cfg.S)
     ?query ?uri_args ?nonce
     () =
@@ -97,21 +127,20 @@ let client (module Cfg : Cfg.S)
         ~log:Lazy.(force Log.Global.log)
         ~heartbeat:Time_ns.Span.(of_int_sec 5)
         uri r w
-    in Deferred.both
+    in
       (* TODO decide what to do with input pipe *)
-      (Pipe.transfer Reader.(pipe @@ Lazy.force stdin) w ~f:begin fun s ->
-        String.chop_suffix_exn s ~suffix:"\n"
-      end)
       (Pipe.transfer
-         (Pipe.map r ~f:(fun s ->
+         Reader.(pipe @@ Lazy.force stdin) w ~f:
+         (fun s ->
+            String.chop_suffix_exn s ~suffix:"\n"
+         )
+      ) >>| fun () ->
+      (Pipe.map r ~f:
+            (fun s ->
               Yojson.Safe.from_string s
               |> Channel.response_of_yojson
               |> Result.ok_or_failwith
-            |> Channel.sexp_of_response |>
-            fun s -> sprintf "%s\n" (Sexp.to_string_hum s))
-         )
-         Writer.(pipe @@ Lazy.force stderr)
-         ~f:Fn.id
+           )
       )
     (*]*)
   in
@@ -203,8 +232,15 @@ let command =
     let%bind nonce =
       Nonce.File.(pipe ~init:default_filename) () in
     client (module Cfg)
-      ?query ?uri_args ~nonce () >>= fun _ ->
-    Deferred.unit
+      ?query ?uri_args ~nonce () >>=
+      Pipe.iter
+        ~f:
+          (fun s ->
+            Channel.sexp_of_response s |>
+            Sexp.to_string_hum |>
+            printf "%s\n" |>
+            return
+          )
   in
   Channel.name,
   Command.async_spec

@@ -140,6 +140,6 @@ val client :
   (module Cfg.S) ->
   ?query:Sexp.t sexp_list ->
   ?uri_args:uri_args -> unit ->
-  (unit * unit) Deferred.t
+  response Pipe.Reader.t Deferred.t
 
 val command : string * Command.t

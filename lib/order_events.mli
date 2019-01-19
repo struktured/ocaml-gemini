@@ -115,5 +115,5 @@ val client :
   (module Cfg.S) ->
   ?query:Sexp.t list ->
   ?uri_args:uri_args ->
-  unit -> (unit * unit) Deferred.t
+  unit -> response Pipe.Reader.t Deferred.t
 

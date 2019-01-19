@@ -9,7 +9,7 @@ authors: "Carmelo Piccione"
 homepage: "https://github.com/struktured/ocaml-gemini"
 license: "MIT"
 bug-reports: "https://github.com/struktured/ocaml-gemini/issues"
-
+dev-repo: "git+https://github.com/struktured/ocaml-gemini.git"
 build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
