@@ -1,6 +1,6 @@
 opam-version: "2.0"
-maintainer: "Carmelo Piccione <carmelo.piccione@struktured.io>"
-description: "OCaml bindings for Gemini Trading Exchange API."
+maintainer: "Carmelo Piccione <carmelo.piccione@gmail.com>"
+synopsis: "OCaml bindings for Gemini Trading Exchange API"
 authors: "Carmelo Piccione"
 homepage: "https://github.com/struktured/ocaml-gemini"
 license: "MIT"
