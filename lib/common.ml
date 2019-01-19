@@ -118,7 +118,7 @@ end
 module Currency = struct
 
   module T = struct
-    type t = [`Eth | `Btc | `Usd | `Zec | `Bch]
+    type t = [`Eth | `Btc | `Usd | `Zec | `Bch | `Ltc]
     [@@deriving sexp, enumerate]
     let to_string = function
       | `Eth -> "eth"
@@ -126,6 +126,7 @@ module Currency = struct
       | `Usd -> "usd"
       | `Zec -> "zec"
       | `Bch -> "bch"
+      | `Ltc -> "ltc"
   end
   include T
   include Json.Make(T)
