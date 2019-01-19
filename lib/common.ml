@@ -26,21 +26,28 @@ module Symbol = struct
   module T = struct
     type t =
       [ `Btcusd | `Ethusd | `Ethbtc
-      | `Zecusd | `Zecbtc | `Zeceth
-      | `Ltcusd | `Ltcbtc | `Ltceth
+      | `Zecusd | `Zecbtc | `Zeceth | `Zecbch | `Zecltc
+      | `Ltcusd | `Ltcbtc | `Ltceth | `Ltcbch
+      | `Bchusd | `Bchbtc | `Bcheth
       ]
     [@@deriving sexp, enumerate]
 
     let to_string : [<t] -> string = function
       | `Btcusd -> "btcusd"
+      | `Bchusd -> "bchusd"
+      | `Bchbtc -> "bchbtc"
+      | `Bcheth -> "bcheth"
       | `Ethusd -> "ethusd"
       | `Ethbtc -> "ethbtc"
       | `Zecusd -> "zecusd"
       | `Zecbtc -> "zecbtc"
       | `Zeceth -> "zeceth"
+      | `Zecbch -> "zecbch"
+      | `Zecltc -> "zecltc"
       | `Ltcusd -> "ltcusd"
       | `Ltcbtc -> "ltcbtc"
       | `Ltceth -> "ltceth"
+      | `Ltcbch -> "ltcbch"
 
 
   end
@@ -111,12 +118,14 @@ end
 module Currency = struct
 
   module T = struct
-    type t = [`Eth | `Btc | `Usd | `Zec] [@@deriving sexp, enumerate]
+    type t = [`Eth | `Btc | `Usd | `Zec | `Bch]
+    [@@deriving sexp, enumerate]
     let to_string = function
       | `Eth -> "eth"
       | `Btc -> "btc"
       | `Usd -> "usd"
       | `Zec -> "zec"
+      | `Bch -> "bch"
   end
   include T
   include Json.Make(T)

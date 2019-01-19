@@ -23,37 +23,11 @@ module V1 : sig
       type ms = t [@@deriving sexp, yojson]
       type sec = t [@@deriving sexp, yojson]
     end
-  module Currency :
-    sig
-      type t =
-        [ `Btc | `Eth | `Usd | `Zec] [@@deriving sexp, yojson, enumerate]
-      val to_string : [< t] -> string
-    end
-  module Symbol :
-    sig
-      type t =
-        [ `Btcusd | `Ethusd | `Ethbtc
-        | `Zecusd | `Zecbtc | `Zeceth
-        | `Ltcusd | `Ltcbtc | `Ltceth
-        ]
-      [@@deriving sexp, yojson, enumerate]
-      val to_string : [< t] -> string
-    end
-  module Exchange :
-    sig
-      type t = [ `Gemini ] [@@deriving sexp, yojson, enumerate]
-      val to_string : [< t] -> string
-    end
-  module Side :
-    sig
-      type t = [ `Buy | `Sell ] [@@deriving sexp, yojson, enumerate]
-      val to_string : [< t] -> string
-    end
-  module Order_type :
-    sig
-      type t = [ `Exchange_limit ] [@@deriving sexp, yojson, enumerate]
-      val to_string : [< t] -> string
-    end
+  module Currency : module type of Currency
+  module Symbol : module type of Symbol
+  module Exchange : module type of Exchange
+  module Side : module type of Side
+  module Order_type : module type of Order_type
   module Order_execution_option :
     sig
       type t =
