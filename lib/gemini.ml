@@ -20,11 +20,13 @@ module V1 = struct
       let name = "heartbeat"
       let path = path@["heartbeat"]
       type request = unit [@@deriving sexp, yojson]
-      type response = {result:bool [@default true]} [@@deriving sexp, of_yojson]
+      type response = {result:bool [@default true]}
+      [@@deriving sexp, of_yojson]
     end
     include T
     include Rest.Make_no_arg(T)
   end
+
   module Order_execution_option = struct
 
     module T = struct

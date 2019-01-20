@@ -1,3 +1,17 @@
+(** A strongly typed gemini trading api written in pure OCaml
+    with both websocket and rest endpoints supported.
+
+    Submodules of the [V1] module are either REST operations which
+    can be invoked via a well typed invocation of [Operation.post],
+    or they are web socket interfaces such as [Market_data] and
+    [Order_events]. Use the [client] function to get a typed response pipe over
+    the socket of these services.
+
+    All service invocations require a [Cfg] module which is usually
+    provided fromt he command line or environment variables for api host and
+    secret information.
+*)
+
 open Common
 module Auth = Auth
 module Result = Json.Result
@@ -6,10 +20,15 @@ module Result = Json.Result
 (** Version v1 of the Gemini REST and web socket apis. *)
 module V1 : sig
   val path : string list
+
+  (** Heartbeat REST api operation. *)
   module Heartbeat :
     sig
-      type request = unit [@@deriving sexp, yojson]
-      type response = { result : bool; } [@@deriving sexp, of_yojson]
+      type request = unit [@@deriving sexp, of_yojson]
+      type response = { result : bool; } [@@deriving sexp]
+      include Rest.Operation.S
+        with type request := request
+        with type response := response
       val post :
         (module Cfg.S) ->
         Nonce.reader ->
@@ -25,17 +44,27 @@ module V1 : sig
   module Exchange : module type of Exchange
   module Side : module type of Side
   module Order_type : module type of Order_type
+
+  (** Represents different execution rules for an order. *)
   module Order_execution_option :
     sig
+
+      (** The type of an order execution rule. *)
       type t =
         [ `Auction_only | `Immediate_or_cancel | `Maker_or_cancel ]
       [@@deriving sexp, yojson, enumerate]
       val to_string : [< t] -> string
     end
+
+  (** Represents an order on the Gemini trading exchange over
+      the REST api. *)
   module Order :
     sig
       val name : string
       val path : string list
+
+      (** Represents the status of an order on the Gemini trading
+          exchange over the REST api. *)
       module Status :
       sig
         type request =
@@ -74,6 +103,9 @@ module V1 : sig
           ] Deferred.t
         val command : string * Command.t
       end
+
+      (** Represents a new order request on the Gemini trading exchange
+          over the REST api. *)
       module New :
         sig
           type request = {
@@ -99,6 +131,9 @@ module V1 : sig
             ] Deferred.t
           val command : string * Command.t
         end
+
+      (** Represents order cancellation features on the
+          Gemini trading exchange over the REST api. *)
       module Cancel :
         sig
           val name : string
@@ -165,7 +200,10 @@ module V1 : sig
         end
       val command : string * Command.t
     end
-  module Orders :
+
+   (** Gets the status of all open orders on
+       Gemini trading exchange over the REST api. *)
+   module Orders :
     sig
       type request = unit [@@deriving sexp, of_yojson]
       type response = Order.Status.response list [@@deriving sexp]
@@ -182,7 +220,10 @@ module V1 : sig
         ] Deferred.t
       val command : string * Command.t
     end
-  module Mytrades :
+
+   (** Gets all trades executed by this api user on
+       Gemini trading exchange over the REST api. *)
+   module Mytrades :
     sig
       type trade = {
         price : decimal_string;
@@ -221,6 +262,8 @@ module V1 : sig
         ] Deferred.t
       val command : string * Command.t
     end
+  (** Gets all trade volume executed by on the
+      Gemini trading exchange over the REST api. *)
   module Tradevolume :
     sig
       type volume = {
@@ -259,7 +302,10 @@ module V1 : sig
         ] Deferred.t
       val command : string * Command.t
     end
-  module Balances :
+
+   (** Gets all balances for this api user on the
+       Gemini trading exchange over the REST api. *)
+   module Balances :
     sig
       type request = unit [@@deriving sexp, of_yojson]
       type balance =
