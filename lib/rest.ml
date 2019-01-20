@@ -27,8 +27,6 @@ module Operation = struct
     include S with type request = unit
   end
 
-  type status = [`Ok | `Error of string]
-
 end
 
 module Request = Nonce.Request
