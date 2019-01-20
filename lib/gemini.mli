@@ -2,6 +2,8 @@ open Common
 module Auth = Auth
 module Result = Json.Result
 
+
+(** Version v1 of the Gemini REST and web socket apis. *)
 module V1 : sig
   val path : string list
   module Heartbeat :
@@ -17,12 +19,7 @@ module V1 : sig
         | `Ok of response
         ] Deferred.t
     end
-  module Timestamp :
-    sig
-      type t = Time.t [@@deriving sexp, yojson]
-      type ms = t [@@deriving sexp, yojson]
-      type sec = t [@@deriving sexp, yojson]
-    end
+  module Timestamp : module type of Timestamp
   module Currency : module type of Currency
   module Symbol : module type of Symbol
   module Exchange : module type of Exchange
@@ -41,11 +38,9 @@ module V1 : sig
       val path : string list
       module Status :
       sig
-        val name : string
-        val path : string list
         type request =
-          { order_id : int_number; } [@@deriving sexp, yojson]
-        type response = {
+          { order_id : int_number; } [@@deriving sexp, of_yojson]
+       type response = {
           client_order_id : string option;
           order_id : int_string;
           id : int_string;
@@ -65,7 +60,10 @@ module V1 : sig
           options : Order_execution_option.t list;
           price : decimal_string;
           original_amount : decimal_string;
-        } [@@deriving sexp, of_yojson]
+        } [@@deriving sexp]
+        include Rest.Operation.S
+          with type request := request
+          with type response := response
         val post :
           (module Cfg.S) ->
           Nonce.reader ->
@@ -78,8 +76,6 @@ module V1 : sig
       end
       module New :
         sig
-          val name : string
-          val path : string list
           type request = {
             client_order_id : string;
             symbol : Symbol.t;
@@ -88,8 +84,11 @@ module V1 : sig
             side : Side.t;
             type_ : Order_type.t;
             options : Order_execution_option.t list;
-          } [@@deriving sexp, yojson]
-          type response = Status.response [@@deriving sexp, of_yojson]
+          } [@@deriving sexp, of_yojson]
+          type response = Status.response [@@deriving sexp]
+          include Rest.Operation.S
+            with type request := request
+            with type response := response
           val post :
             (module Cfg.S) ->
             Nonce.reader ->
@@ -106,12 +105,13 @@ module V1 : sig
           val path : string list
           module By_order_id :
             sig
-              val name : string
-              val path : string list
               type request =
-                { order_id : int_string; } [@@deriving sexp, yojson]
-              type response = Status.response [@@deriving sexp, of_yojson]
-              val post :
+                { order_id : int_string; } [@@deriving sexp, of_yojson]
+              type response = Status.response [@@deriving sexp]
+              include Rest.Operation.S
+                with type request := request
+                with type response := response
+               val post :
                 (module Cfg.S) ->
                 Nonce.reader ->
                 request ->
@@ -127,11 +127,12 @@ module V1 : sig
           } [@@deriving sexp, yojson]
           module All :
             sig
-              val name : string
-              val path : string list
-              type request = unit [@@deriving sexp, yojson]
+              type request = unit [@@deriving sexp, of_yojson]
               type response =
-                { details : details; } [@@deriving sexp, of_yojson]
+                { details : details; } [@@deriving sexp]
+              include Rest.Operation.S
+                with type request := request
+                with type response := response
               val post :
                 (module Cfg.S) ->
                 Nonce.reader ->
@@ -144,10 +145,12 @@ module V1 : sig
             end
           module Session :
             sig
-              val name : string
-              val path : string list
-              type request = unit [@@deriving sexp, yojson]
-              type response = { details : details; } [@@deriving sexp, of_yojson]
+              type request = unit [@@deriving sexp, of_yojson]
+              type response = { details : details; }
+              [@@deriving sexp]
+              include Rest.Operation.S
+                with type request := request
+                with type response := response
               val post :
                 (module Cfg.S) ->
                 Nonce.reader ->
@@ -164,11 +167,12 @@ module V1 : sig
     end
   module Orders :
     sig
-      val name : string
-      val path : string list
-      type request = unit [@@deriving sexp, yojson]
-      type response = Order.Status.response list [@@deriving sexp, of_yojson]
-      val post :
+      type request = unit [@@deriving sexp, of_yojson]
+      type response = Order.Status.response list [@@deriving sexp]
+      include Rest.Operation.S
+        with type request := request
+        with type response := response
+       val post :
         (module Cfg.S) ->
         Nonce.reader ->
         request ->
@@ -195,15 +199,19 @@ module V1 : sig
         is_auction_fill : bool;
         exchange : Exchange.t;
       } [@@deriving sexp, yojson]
-      val name : string
-      val path : string list
+
       type request = {
         symbol : Symbol.t;
         limit_trades : int option;
         timestamp : Timestamp.sec option;
-      } [@@deriving sexp, yojson]
-      type response = trade list [@@deriving sexp, of_yojson]
-      val post :
+      } [@@deriving sexp, of_yojson]
+
+      type response = trade list [@@deriving sexp]
+
+      include Rest.Operation.S
+        with type request := request
+        with type response := response
+       val post :
         (module Cfg.S) ->
         Nonce.reader ->
         request ->
@@ -236,11 +244,12 @@ module V1 : sig
         sell_taker_notional : decimal_number;
         sell_taker_count : int_number;
       } [@@deriving sexp, yojson]
-      val name : string
-      val path : string list
-      type request = unit [@@deriving sexp, yojson]
-      type response = volume list list [@@deriving sexp, of_yojson]
-      val post :
+      type request = unit [@@deriving sexp, of_yojson]
+      type response = volume list list [@@deriving sexp]
+      include Rest.Operation.S
+        with type request := request
+        with type response := response
+       val post :
         (module Cfg.S) ->
         Nonce.reader ->
         request ->
@@ -252,9 +261,7 @@ module V1 : sig
     end
   module Balances :
     sig
-      val name : string
-      val path : string list
-      type request = unit [@@deriving sexp, yojson]
+      type request = unit [@@deriving sexp, of_yojson]
       type balance =
       {
         currency : Currency.t;
@@ -263,8 +270,11 @@ module V1 : sig
         available_for_withdrawal : decimal_string;
         type_ : string;
       } [@@deriving sexp, yojson]
-      type response = balance list [@@deriving sexp, of_yojson]
-      val post :
+      type response = balance list [@@deriving sexp]
+      include Rest.Operation.S
+        with type request := request
+        with type response := response
+       val post :
         (module Cfg.S) ->
         Nonce.reader ->
         request ->

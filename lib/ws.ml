@@ -227,7 +227,7 @@ let command =
     let%bind nonce =
       Nonce.File.(pipe ~init:default_filename) () in
     Log.Global.info "Initiating channel %s with path %s"
-      Channel.name (String.concat ~sep:"/" Channel.path);
+      Channel.name (Path.to_string Channel.path);
     client (module Cfg)
       ?query ?uri_args ~nonce () >>= fun pipe ->
     Log.Global.info "Broadcasting channel %s to stderr..." Channel.name;
