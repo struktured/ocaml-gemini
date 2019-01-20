@@ -13,7 +13,7 @@ module Request = Nonce.Request
 type uri_args = [`None] [@@deriving sexp, enumerate]
 
 
-(** Represents messages types supported by the Gemini exchange *)
+(** Represents order message types supported by the Gemini exchange *)
 module Message_type : sig
   (* The support message types for order events -
      either [`Update] or [`Heartbeat].
