@@ -1,3 +1,9 @@
+(** Order events web sockets api for the gemini trading exchange. This
+    is used to get private events about orders and trades without having to
+    depend on the slower and clumsier json REST api. Users still must submit
+    orders using REST, however. This is only for responses.
+*)
+
 open Common
 
 module Request = Nonce.Request
@@ -6,18 +12,28 @@ module Request = Nonce.Request
 (** The order events api has no uri arguments .*)
 type uri_args = [`None] [@@deriving sexp, enumerate]
 
+
+(** Represents messages types supported by the Gemini exchange *)
 module Message_type : sig
+  (* The support message types for order events -
+     either [`Update] or [`Heartbeat].
+  *)
   type t = [`Update | `Heartbeat] [@@deriving sexp, enumerate]
   include Json.ENUM_STRING with type t := t
 end
 
+(** Response type for heart beat messages. *)
 type heartbeat = {timestampms:Timestamp.ms;
                   sequence:int_number;
                   trace_id:string;
                   socket_sequence:int_number
                  } [@@deriving sexp, yojson]
 
+
+(** Represents different order event types. *)
 module Event_type : sig
+
+  (** Enumerates all possible order events. *)
   type t = [ `Subscription_ack
            | `Heartbeat
            | `Initial
@@ -32,7 +48,10 @@ module Event_type : sig
   include Json.ENUM_STRING with type t:= t
 end
 
-
+(** Events can be filtered by symbol using [Symbol_filter symbol] or
+    for an event type using [Event_type_filter event_type] or using
+    an api session filter [Api_session_filter session-id].
+*)
 type query = [ `Symbol_filter of Symbol.t
              | `Event_type_filter of Event_type.t
              | `Api_session_filter of string
@@ -40,17 +59,24 @@ type query = [ `Symbol_filter of Symbol.t
 
 val encode_query : query -> string * string
 
+(** Represents differents reasons an order event occurred. *)
 module Reason : sig
   type t =
     [`Place | `Trade | `Cancel | `Initial] [@@deriving sexp, enumerate]
   include Json.ENUM_STRING with type t := t
 end
 
+(** Represents different liquidity types *)
 module Liquidity : sig
+
+  (** [Taker] is the only known liquidity type but this
+      is poorly documented so other values might exist.
+  *)
   type t = [`Taker] [@@deriving sexp, enumerate]
   include Json.ENUM_STRING with type t := t
 end
 
+(** Type type of an order fill event. *)
 type fill = {
   trade_id:int_string;
   liquidity:Liquidity.t;
@@ -60,10 +86,14 @@ type fill = {
   fee_currency:Currency.t;
 } [@@deriving sexp, yojson]
 
+(** Represents an api session name *)
 module Api_session : sig
-  type t = string [@@deriving sexp,yojson]
+
+  (** An api session name. *)
+  type t = string [@@deriving sexp, yojson]
 end
 
+(** The type of an order event. *)
 type order_event =
   {order_id:string;
    api_session:Api_session.t;
@@ -89,6 +119,7 @@ type order_event =
    socket_sequence:int_number
   } [@@deriving sexp, yojson]
 
+(** The type of a subscription acknowledgement event. *)
 type subscription_ack =
   {account_id:int_number [@key "accountId"];
    subscription_id:string [@key "subscriptionId"];
@@ -97,6 +128,7 @@ type subscription_ack =
    event_type_filter:Event_type.t list [@key "eventTypeFilter"]
   } [@@deriving sexp, yojson]
 
+(** The response type for any order message. *)
 type response =
   [ `Subscription_ack of subscription_ack
   | `Heartbeat of heartbeat
@@ -104,10 +136,7 @@ type response =
   | `Order_events of order_event list
   ] [@@deriving sexp]
 
-
-val handle_client :
-  [< Socket.Address.t ] -> Reader.t -> Writer.t -> unit Deferred.t
-val command : decimal_string * Async.Command.t
+val command : string * Async.Command.t
 
 val client :
   nonce:int Pipe.Reader.t ->
