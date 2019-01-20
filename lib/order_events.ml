@@ -13,10 +13,6 @@ module T = struct
   let encode_uri_args _ =
     failwith "uri path arguments not support for order events"
 
-  type request =
-    { heartbeat : bool option [@default None] }
-  [@@deriving sexp, yojson]
-
   module Message_type = struct
     module T = struct
       type t = [`Update | `Heartbeat] [@@deriving sexp, enumerate]
@@ -163,12 +159,12 @@ let response_of_yojson :
       (List.Assoc.find assoc ~equal:String.equal
          "type" |> function
        | None ->
-         Log.Global.debug "no type in event payload:%s"
+         Log.Global.debug "no type in event payload: %s"
            (Yojson.Safe.to_string json);
          subscription_ack_of_yojson json |>
          Result.map ~f:(fun event -> `Subscription_ack event);
        | Some event_type ->
-         Log.Global.debug "found type in event payload:%s"
+         Log.Global.debug "found type in event payload: %s"
            (Yojson.Safe.to_string json);
           Event_type.of_yojson event_type |> function
          | Result.Error _ as e -> e

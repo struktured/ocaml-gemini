@@ -1,11 +1,10 @@
 open Common
 
 module Request = Nonce.Request
-type uri_args = [`None] [@@deriving sexp, enumerate]
 
-type request =
-  { heartbeat : bool option [@default None] }
-[@@deriving sexp, yojson]
+
+(** The order events api has no uri arguments .*)
+type uri_args = [`None] [@@deriving sexp, enumerate]
 
 module Message_type : sig
   type t = [`Update | `Heartbeat] [@@deriving sexp, enumerate]
