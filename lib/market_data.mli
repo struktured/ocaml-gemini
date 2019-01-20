@@ -1,3 +1,5 @@
+(** Market data websockets api for the Gemini trading exchange *)
+
 open! Common
 
 (** Encapsulates various concepts of side in the market dat api. *)
