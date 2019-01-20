@@ -57,8 +57,6 @@ type query = [ `Symbol_filter of Symbol.t
              | `Api_session_filter of string
              ] [@@deriving sexp]
 
-val encode_query : query -> string * string
-
 (** Represents differents reasons an order event occurred. *)
 module Reason : sig
   type t =
@@ -135,6 +133,11 @@ type response =
   | `Order_event of order_event
   | `Order_events of order_event list
   ] [@@deriving sexp]
+
+include Ws.CHANNEL
+  with type uri_args := uri_args
+  with type query := query
+  with type response := response
 
 val command : string * Async.Command.t
 

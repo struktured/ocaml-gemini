@@ -13,7 +13,7 @@ sig
     val to_string : [< t ] -> string
   end
 
-  (** Represents an auction style side *)
+  (** Represents an auction style side. *)
   module Auction :
   sig
     type t = [ `Auction ] [@@deriving sexp, enumerate, yojson]
@@ -26,14 +26,6 @@ sig
 
   val to_string : [< t ] -> string
 end
-
-val name : string
-val path : string list
-type uri_args = Symbol.t [@@deriving yojson, sexp]
-val encode_uri_args : [< Symbol.t ] -> string
-
-type request = { heartbeat : bool option; } [@@deriving sexp, yojson]
-
 
 (** Represents market data message types supported by the Gemini exchange. *)
 module Message_type :
@@ -176,8 +168,12 @@ type message =
 type response = {
   socket_sequence : int_number;
   message : message;
-} [@@deriving sexp, of_yojson]
+} [@@deriving sexp]
 
+include Ws.CHANNEL
+  with type uri_args = Symbol.t
+  with type query = unit
+  with type response := response
 
 val client :
   (module Cfg.S) ->

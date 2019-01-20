@@ -45,9 +45,6 @@ module T = struct
   type query = unit [@@deriving sexp]
   let encode_query _ = failwith "queries not supported"
 
-  type request =
-    { heartbeat : bool option [@default None] } [@@deriving sexp, yojson]
-
   module Message_type = struct
     module T = struct
       type t = [`Update | `Heartbeat] [@@deriving sexp, enumerate]
