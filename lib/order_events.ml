@@ -10,7 +10,7 @@ module T = struct
   let authentication = `Private
 
   let default_uri_args = None
-  let uri_args_to_string _ =
+  let encode_uri_args _ =
     failwith "uri path arguments not support for order events"
 
   type request =

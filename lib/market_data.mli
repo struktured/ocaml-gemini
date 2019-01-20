@@ -20,7 +20,7 @@ end
 val name : string
 val path : string list
 type uri_args = Symbol.t [@@deriving yojson, sexp]
-val uri_args_to_string : [< Symbol.t ] -> string
+val encode_uri_args : [< Symbol.t ] -> string
 
 type request = { heartbeat : bool option; } [@@deriving sexp, yojson]
 module Message_type :

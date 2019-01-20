@@ -1,4 +1,4 @@
-
+(** Websocket api support for the gemini trading exchange. *)
 
 (** Specification for a websocket channel. *)
 module type CHANNEL = sig
@@ -23,7 +23,7 @@ module type CHANNEL = sig
   (** Encder from well typed uri arguments to a string
       suitable for a uri.
   *)
-  val uri_args_to_string : uri_args -> string
+  val encode_uri_args : uri_args -> string
 
   (** Defaut uri arguments. Optional for some channels. *)
   val default_uri_args : uri_args option
@@ -72,7 +72,7 @@ let client (module Cfg : Cfg.S)
         (String.concat ~sep:"/"
            (Channel.path
             @
-            Option.(map ~f:(Channel.uri_args_to_string) uri_args |> to_list)
+            Option.(map ~f:(Channel.encode_uri_args) uri_args |> to_list)
            )
         )
       ()
@@ -122,27 +122,22 @@ let client (module Cfg : Cfg.S)
       | `Public -> None
       )
       |> Option.value ~default:(Cohttp.Header.init ()) in
-    let r, w = Websocket_async.client_ez
+    let r, _w = Websocket_async.client_ez
         ~extra_headers
         ~log:Lazy.(force Log.Global.log)
         ~heartbeat:Time_ns.Span.(of_int_sec 5)
         uri r w
     in
-      (* TODO decide what to do with input pipe *)
-      (Pipe.transfer
-         Reader.(pipe @@ Lazy.force stdin) w ~f:
-         (fun s ->
-            String.chop_suffix_exn s ~suffix:"\n"
-         )
-      ) >>| fun () ->
-      (Pipe.map r ~f:
-            (fun s ->
-              Yojson.Safe.from_string s
-              |> Channel.response_of_yojson
-              |> Result.ok_or_failwith
-           )
+    Log.Global.info "input pipe established for channel %s" Channel.name;
+    Log.Global.flushed () >>| fun () ->
+      (Pipe.map r
+      ~f:
+        (fun s ->
+           Yojson.Safe.from_string s
+           |> Channel.response_of_yojson
+           |> Result.ok_or_failwith
+        )
       )
-    (*]*)
   in
   let hostport = Host_and_port.create ~host ~port in
   Tcp.(with_connection Where_to_connect.(of_host_and_port hostport) tcp_fun)
@@ -231,15 +226,26 @@ let command =
       | false -> Some query in
     let%bind nonce =
       Nonce.File.(pipe ~init:default_filename) () in
+    Log.Global.info "Initiating channel %s with path %s"
+      Channel.name (String.concat ~sep:"/" Channel.path);
     client (module Cfg)
-      ?query ?uri_args ~nonce () >>=
-      Pipe.iter
+      ?query ?uri_args ~nonce () >>= fun pipe ->
+    Log.Global.info "Broadcasting channel %s to stderr..." Channel.name;
+      Pipe.transfer pipe
+        (*(Pipe.map pipe
+           ~f:
+             (fun s ->
+                Channel.sexp_of_response s |>
+                Sexp.to_string_hum |>
+                printf "%s\n"
+             )
+        )*)
+        Writer.(pipe (Lazy.force stderr))
         ~f:
           (fun s ->
-            Channel.sexp_of_response s |>
-            Sexp.to_string_hum |>
-            printf "%s\n" |>
-            return
+                Channel.sexp_of_response s |>
+                Sexp.to_string_hum |>
+                sprintf "%s\n"
           )
   in
   Channel.name,
@@ -249,12 +255,14 @@ let command =
              ) spec run
 end
 
+(** Create a websocket interface that has no request parameters *)
 module Make_no_request(Channel:CHANNEL) =
 struct
   include Impl(Channel)
   let client = client ?nonce:None
 end
 
+(** Create a websocket interface with request parameters *)
 module Make(Channel:CHANNEL) =
 struct
   include Impl(Channel)

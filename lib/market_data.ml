@@ -40,7 +40,7 @@ module T = struct
 
   let authentication = `Public
   let default_uri_args = Some `Ethusd
-  let uri_args_to_string = Symbol.to_string
+  let encode_uri_args = Symbol.to_string
 
   type query = unit [@@deriving sexp]
   let encode_query _ = failwith "queries not supported"
