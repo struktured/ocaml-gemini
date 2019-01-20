@@ -1,3 +1,5 @@
+(** Json utility functions. *)
+
 module Result = struct
   include Result
   let both x y : (('a * 'b), 'error) t =
@@ -11,11 +13,14 @@ module Result = struct
 
 end
 
+(** An enumeration encodable as a json string *)
 module type ENUM_STRING = sig
   type t [@@deriving enumerate]
   val to_string : t -> string
 end
 
+(** Produce json encoders and decoders given an enumerated
+    type and its string representations. *)
 module Make(E:ENUM_STRING) = struct
 
   let dict = List.zip_exn

@@ -30,6 +30,12 @@ let host ~env =
   | _ -> sprintf "api.%s.gemini.com" env
 let version_1 = "v1"
 
+
+(** Gemini configuration. These values are the only
+    necessary parameters and secrets to connect to an endpoint.
+
+    For each gemini environment a different configuration module
+    should be instantiated. *)
 module type S = sig
   val version : string
   val api_host : string
@@ -40,6 +46,12 @@ end
 let api_key = param ~name:"API_KEY"
 let api_secret = param ~name:"API_SECRET"
 
+(** Makes a configuration module given a desired
+    Gemini environment. It then infers the values from
+    environment variables.
+
+    Any required fields not specified will generate a runtime error.
+*)
 let make env =
   let module M = struct
     let env = env
@@ -50,16 +62,30 @@ let make env =
   end in
   (module M : S)
 
+
+(** Creates a configuration module for the sandbox environment.
+    Will query the unix environment for the necessary parameters.
+
+    It is recommended to generate this module exactly once in your
+    program. *)
 module Sandbox () =
 struct
   include (val make "sandbox" : S)
 end
 
+(** Creates a configuration module for the production environment.
+    Will query the unix environment for the necessary parameters.
+
+    It is recommended to generate this module exactly once in your
+    program. *)
 module Production () =
 struct
   include (val make "production" : S)
 end
 
+(** Produces a configuration module given a string environment name
+    which should be one of "production" or "sandbox".
+*)
 let of_string s =
   match String.lowercase s with
   | "production" ->
@@ -83,7 +109,12 @@ let param =
       )
   )
 
-let get param =
+(** Ensures a configuration chosen given an optional configuration module,
+    usually provided from the command line. If the module is
+    provided, it returns it unwrapped. Otherwise the unix environment is
+    queried to produce a module, defaulting to sandbox if no
+    environment variables exist. *)
+let or_default param =
   match param with
   | None ->
     (match Unix.getenv "GEMINI_ENV" with

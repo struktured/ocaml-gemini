@@ -185,7 +185,7 @@ struct
            let request = Operation.request_of_sexp request in
            Log.Global.info "request:\n %s"
              (Operation.sexp_of_request request |> Sexp.to_string);
-           let config = Cfg.get config in
+           let config = Cfg.or_default config in
            Nonce.File.(pipe ~init:default_filename)
              () >>= fun nonce ->
            post config nonce request >>= function
@@ -220,7 +220,7 @@ struct
          let config = Cfg.param in
          fun () ->
            let request = () in
-           let config = Cfg.get config in
+           let config = Cfg.or_default config in
            Nonce.File.(pipe ~init:default_filename) () >>= fun nonce ->
            post config nonce request >>= function
            | `Ok response ->

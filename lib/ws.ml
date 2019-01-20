@@ -214,7 +214,7 @@ let command =
   in
   let run cfg
       loglevel query uri_args () =
-    let cfg = Cfg.get cfg in
+    let cfg = Cfg.or_default cfg in
     let module Cfg = (val cfg:Cfg.S) in
     Option.iter loglevel ~f:set_loglevel;
     let uri_args =
