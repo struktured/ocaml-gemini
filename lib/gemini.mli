@@ -8,7 +8,7 @@
     the socket of these services.
 
     All service invocations require a [Cfg] module which is usually
-    provided fromt he command line or environment variables for api host and
+    provided from the command line or environment variables for api host and
     secret information.
 *)
 
@@ -225,6 +225,8 @@ module V1 : sig
        Gemini trading exchange over the REST api. *)
    module Mytrades :
     sig
+
+      (** Represents one instance of a trade exchanged on Gemini. *)
       type trade = {
         price : decimal_string;
         amount : decimal_string;
@@ -241,12 +243,16 @@ module V1 : sig
         exchange : Exchange.t;
       } [@@deriving sexp, yojson]
 
+
+      (** Trade request parameters. *)
       type request = {
         symbol : Symbol.t;
         limit_trades : int option;
         timestamp : Timestamp.sec option;
       } [@@deriving sexp, of_yojson]
 
+
+      (** Mytrades repsonse type- the type of a list trades. *)
       type response = trade list [@@deriving sexp]
 
       include Rest.Operation.S
@@ -266,6 +272,10 @@ module V1 : sig
       Gemini trading exchange over the REST api. *)
   module Tradevolume :
     sig
+
+      (** The type of a trade volume entity for
+          one particular symbol on the Gemini trading exchange.
+      *)
       type volume = {
         account_id : int_number;
         symbol : Symbol.t;
@@ -288,6 +298,9 @@ module V1 : sig
         sell_taker_count : int_number;
       } [@@deriving sexp, yojson]
       type request = unit [@@deriving sexp, of_yojson]
+
+      (** The type of a trade volume response, which is a list of list
+          of volumes grouped by exchange symbol. *)
       type response = volume list list [@@deriving sexp]
       include Rest.Operation.S
         with type request := request
@@ -307,7 +320,11 @@ module V1 : sig
        Gemini trading exchange over the REST api. *)
    module Balances :
     sig
+
+      (** Balance queries have no request parameters. *)
       type request = unit [@@deriving sexp, of_yojson]
+
+      (** The type of a balance for one specific currency. *)
       type balance =
       {
         currency : Currency.t;
@@ -316,6 +333,8 @@ module V1 : sig
         available_for_withdrawal : decimal_string;
         type_ : string;
       } [@@deriving sexp, yojson]
+
+      (* A list of balances, one for each supported currency. *)
       type response = balance list [@@deriving sexp]
       include Rest.Operation.S
         with type request := request

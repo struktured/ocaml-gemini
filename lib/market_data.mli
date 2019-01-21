@@ -1,5 +1,6 @@
-(** Market data websockets api for the Gemini trading exchange *)
-
+(** Market data websockets api for the Gemini trading exchange. This
+    broadcasts only public events and require no authentication. 
+*)
 open! Common
 
 (** Encapsulates various concepts of side in the market dat api. *)
