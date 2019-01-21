@@ -1,7 +1,14 @@
 (** Json utility functions. *)
 
+
+(** Result specification when deserializing raw
+    json into something strongly in typed ocaml.
+  *)
 module Result = struct
   include Result
+  (** Unify results into tuple [('a , 'b)] if both are ok,
+      otherwise produce one of the errors .
+  *)
   let both x y : (('a * 'b), 'error) t =
     match x with 
     | Result.Ok x ->
@@ -13,7 +20,7 @@ module Result = struct
 
 end
 
-(** An enumeration encodable as a json string *)
+(** An enumeration encodable as a json string. *)
 module type ENUM_STRING = sig
   type t [@@deriving enumerate]
   val to_string : t -> string
