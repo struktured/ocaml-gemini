@@ -1,3 +1,4 @@
+(** Path utilities for encoding them into uris or human readable formats. *)
 
 (** The type of a uri path *)
 type t = string list
