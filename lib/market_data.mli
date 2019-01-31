@@ -73,20 +73,26 @@ sig
 end
 
 (** An trade event to an order. *)
-type trade_event = {
-  tid : Int_number.t;
-  price : Decimal_string.t;
-  amount : Decimal_string.t;
-  maker_side : Side.t;
-} [@@deriving sexp, of_yojson]
+module Trade_event :
+sig
+  type t = {
+    tid : Int_number.t;
+    price : Decimal_string.t;
+    amount : Decimal_string.t;
+    maker_side : Side.t;
+  } [@@deriving sexp, of_yojson, fields, csv]
+end
 
 (** An auction open event. *)
-type auction_open_event = {
-  auction_open_ms : Timestamp.ms;
-  auction_time_ms : Timestamp.ms;
-  first_indicative_ms : Timestamp.ms;
-  last_cancel_time_ms : Timestamp.ms;
-} [@@deriving sexp, of_yojson]
+module Auction_open_event :
+sig
+  type t = {
+    auction_open_ms : Timestamp.Ms.t;
+    auction_time_ms : Timestamp.Ms.t;
+    first_indicative_ms : Timestamp.Ms.t;
+    last_cancel_time_ms : Timestamp.Ms.t;
+  } [@@deriving sexp, of_yojson, fields, csv]
+end
 
 
 (** Represents different results possible from an auction. *)
@@ -100,29 +106,34 @@ end
 
 
 (** An auction indicative price event. *)
-type auction_indicative_price_event = {
-  eid : Int_number.t;
-  result : Auction_result.t;
-  time_ms : Timestamp.ms;
-  highest_bid_price : Decimal_string.t;
-  lowest_ask_price : Decimal_string.t;
-  collar_price : Decimal_string.t;
-  indicative_price : Decimal_string.t;
-  indicative_quantity : Decimal_string.t;
-}
+module Auction_indicative_price_event :
+sig
+  type t = {
+    eid : Int_number.t;
+    result : Auction_result.t;
+    time_ms : Timestamp.Ms.t;
+    highest_bid_price : Decimal_string.t;
+    lowest_ask_price : Decimal_string.t;
+    collar_price : Decimal_string.t;
+    indicative_price : Decimal_string.t;
+    indicative_quantity : Decimal_string.t;
+  } [@@deriving sexp, of_yojson, fields, csv]
+end
 
 (** An auction outcome event. *)
-type auction_outcome_event = {
-  eid : Int_number.t;
-  result : Auction_result.t;
-  time_ms : Timestamp.ms;
-  highest_bid_price : Decimal_string.t;
-  lowest_ask_price : Decimal_string.t;
-  collar_price : Decimal_string.t;
-  auction_price : Decimal_string.t;
-  auction_quantity : Decimal_string.t;
-} [@@deriving sexp, of_yojson]
-
+module Auction_outcome_event :
+sig
+  type t = {
+    eid : Int_number.t;
+    result : Auction_result.t;
+    time_ms : Timestamp.Ms.t;
+    highest_bid_price : Decimal_string.t;
+    lowest_ask_price : Decimal_string.t;
+    collar_price : Decimal_string.t;
+    auction_price : Decimal_string.t;
+    auction_quantity : Decimal_string.t;
+  } [@@deriving sexp, of_yojson, fields, csv]
+end
 
 (** Represents different auction event types. *)
 module Auction_event_type :
@@ -137,16 +148,16 @@ end
 
 (** The type of an auction event, unified over all auction event types. *)
 type auction_event =
-  [ `Auction_indicative_price of auction_indicative_price_event
-  | `Auction_open of auction_open_event
-  | `Auction_outcome of auction_outcome_event ]
+  [ `Auction_indicative_price of Auction_indicative_price_event.t
+  | `Auction_open of Auction_open_event.t
+  | `Auction_outcome of Auction_outcome_event.t ]
 [@@deriving sexp, of_yojson]
 
 (** The type of event, unified over auction, change, and trade events. *)
 type event =
   [ `Auction of auction_event
   | `Change of Change_event.t
-  | `Trade of trade_event ]
+  | `Trade of Trade_event.t ]
 [@@deriving sexp, of_yojson]
 
 
@@ -154,8 +165,8 @@ type event =
 type update = {
   event_id : Int_number.t;
   events : event array;
-  timestamp : Timestamp.sec option;
-  timestampms : Timestamp.ms option;
+  timestamp : Timestamp.Sec.t option;
+  timestampms : Timestamp.Ms.t option;
 } [@@deriving sexp, of_yojson]
 
 

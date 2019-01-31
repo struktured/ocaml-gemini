@@ -23,7 +23,7 @@ module Message_type : sig
 end
 
 (** Response type for heart beat messages. *)
-type heartbeat = {timestampms:Timestamp.ms;
+type heartbeat = {timestampms:Timestamp.Ms.t;
                   sequence:Int_number.t;
                   trace_id:string;
                   socket_sequence:Int_number.t
@@ -103,7 +103,7 @@ type order_event =
    behavior:string option [@default None];
    type_ : Event_type.t [@key "type"];
    timestamp:Timestamp.t;
-   timestampms:Timestamp.ms;
+   timestampms:Timestamp.Ms.t;
    is_live : bool;
    is_cancelled : bool;
    is_hidden : bool;

@@ -73,8 +73,8 @@ module V1 = struct
           avg_execution_price : Decimal_string.t;
           side : Side.t;
           type_ : Order_type.t [@key "type"];
-          timestamp : Timestamp.sec;
-          timestampms : Timestamp.ms;
+          timestamp : Timestamp.Sec.t;
+          timestampms : Timestamp.Ms.t;
           is_live : bool;
           is_cancelled : bool;
           is_hidden : bool;
@@ -196,8 +196,8 @@ module V1 = struct
   module Mytrades = struct
     type trade = {price:Decimal_string.t;
                   amount:Decimal_string.t;
-                  timestamp:Timestamp.sec;
-                  timestampms:Timestamp.ms;
+                  timestamp:Timestamp.Sec.t;
+                  timestampms:Timestamp.Ms.t;
                   type_: Side.t [@key "type"];
                   aggressor: bool;
                   fee_currency: Currency.t;
@@ -215,7 +215,7 @@ module V1 = struct
       type request =
         { symbol : Symbol.t;
           limit_trades: int option [@default None];
-          timestamp: Timestamp.sec option [@default None]
+          timestamp: Timestamp.Sec.t option [@default None]
         } [@@deriving sexp, yojson]
       type response = trade list [@@deriving of_yojson, sexp]
     end

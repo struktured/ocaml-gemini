@@ -77,8 +77,8 @@ module V1 : sig
           avg_execution_price : Decimal_string.t;
           side : Side.t;
           type_ : Order_type.t;
-          timestamp : Timestamp.sec;
-          timestampms : Timestamp.ms;
+          timestamp : Timestamp.Sec.t;
+          timestampms : Timestamp.Ms.t;
           is_live : bool;
           is_cancelled : bool;
           is_hidden : bool;
@@ -229,8 +229,8 @@ module V1 : sig
       type trade = {
         price : Decimal_string.t;
         amount : Decimal_string.t;
-        timestamp : Timestamp.sec;
-        timestampms : Timestamp.ms;
+        timestamp : Timestamp.Sec.t;
+        timestampms : Timestamp.Ms.t;
         type_ : Side.t;
         aggressor : bool;
         fee_currency : Currency.t;
@@ -247,7 +247,7 @@ module V1 : sig
       type request = {
         symbol : Symbol.t;
         limit_trades : int option;
-        timestamp : Timestamp.sec option;
+        timestamp : Timestamp.Sec.t option;
       } [@@deriving sexp, of_yojson]
 
 

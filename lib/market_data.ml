@@ -97,19 +97,23 @@ module T = struct
   end
 
 
-  type trade_event =
+  module Trade_event = struct
+  type t =
     {tid:Int_number.t;
      price:Decimal_string.t;
      amount:Decimal_string.t;
      maker_side:Side.t [@key "makerSide"]
-    } [@@deriving of_yojson, sexp]
+    } [@@deriving of_yojson, sexp, fields, csv]
+end
 
-  type auction_open_event =
-    {auction_open_ms:Timestamp.ms;
-     auction_time_ms:Timestamp.ms;
-     first_indicative_ms:Timestamp.ms;
-     last_cancel_time_ms:Timestamp.ms
-    } [@@deriving sexp, of_yojson]
+ module Auction_open_event = struct
+  type t =
+    {auction_open_ms:Timestamp.Ms.t;
+     auction_time_ms:Timestamp.Ms.t;
+     first_indicative_ms:Timestamp.Ms.t;
+     last_cancel_time_ms:Timestamp.Ms.t;
+    } [@@deriving sexp, of_yojson, fields, csv]
+end
 
 
   module Auction_result = struct
@@ -124,28 +128,32 @@ module T = struct
     include (Json.Make(T) : Json.S with type t := t)
   end
 
-  type auction_indicative_price_event =
-    {eid:Int_number.t;
-     result:Auction_result.t;
-     time_ms:Timestamp.ms;
-     highest_bid_price:Decimal_string.t;
-     lowest_ask_price:Decimal_string.t;
-     collar_price:Decimal_string.t;
-     indicative_price:Decimal_string.t;
-     indicative_quantity:Decimal_string.t
-    } [@@deriving sexp, of_yojson]
+  module Auction_indicative_price_event = struct
+    type t =
+      {eid:Int_number.t;
+       result:Auction_result.t;
+       time_ms:Timestamp.Ms.t;
+       highest_bid_price:Decimal_string.t;
+       lowest_ask_price:Decimal_string.t;
+       collar_price:Decimal_string.t;
+       indicative_price:Decimal_string.t;
+       indicative_quantity:Decimal_string.t
+      } [@@deriving sexp, of_yojson, fields, csv]
+  end
 
 
-  type auction_outcome_event =
+  module Auction_outcome_event = struct
+  type t =
     {eid:Int_number.t;
      result:Auction_result.t;
-     time_ms:Timestamp.ms;
+     time_ms:Timestamp.Ms.t;
      highest_bid_price:Decimal_string.t;
      lowest_ask_price:Decimal_string.t;
      collar_price:Decimal_string.t;
      auction_price:Decimal_string.t;
      auction_quantity:Decimal_string.t
-    } [@@deriving sexp, of_yojson]
+    } [@@deriving sexp, of_yojson, fields, csv]
+  end
 
   module Auction_event_type = struct
     module T = struct
@@ -169,10 +177,10 @@ module T = struct
 
   type auction_event =
     [
-      | `Auction_open of auction_open_event
+      | `Auction_open of Auction_open_event.t
       | `Auction_indicative_price of
-          auction_indicative_price_event
-      | `Auction_outcome of auction_outcome_event
+          Auction_indicative_price_event.t
+      | `Auction_outcome of Auction_outcome_event.t
     ] [@@deriving sexp]
 
   let auction_event_of_yojson :
@@ -191,13 +199,13 @@ module T = struct
                (List.Assoc.remove ~equal:String.equal assoc "type") in
            (match event_type with
             | `Auction_open ->
-              auction_open_event_of_yojson json' |>
+              Auction_open_event.of_yojson json' |>
               Result.map ~f:(fun event -> `Auction_open event)
             | `Auction_indicative_price ->
-              auction_indicative_price_event_of_yojson json' |>
+              Auction_indicative_price_event.of_yojson json' |>
               Result.map ~f:(fun event -> `Auction_indicative_price event)
             | `Auction_outcome ->
-              auction_outcome_event_of_yojson json' |>
+              Auction_outcome_event.of_yojson json' |>
               Result.map ~f:(fun event -> `Auction_outcome event)
            )
       )
@@ -208,7 +216,7 @@ module T = struct
 
   type event =
     [ `Change of Change_event.t
-    | `Trade of trade_event
+    | `Trade of Trade_event.t
     | `Auction of auction_event
     ] [@@deriving sexp]
 
@@ -231,7 +239,7 @@ module T = struct
               Change_event.of_yojson json' |>
               Result.map ~f:(fun event -> `Change event)
             | `Trade ->
-              trade_event_of_yojson json' |>
+              Trade_event.of_yojson json' |>
               Result.map ~f:(fun event -> `Trade event)
             | `Auction ->
               auction_event_of_yojson json' |>
@@ -246,8 +254,8 @@ module T = struct
   type update =
     { event_id : Int_number.t [@key "eventId"];
       events : event array;
-      timestamp : Timestamp.sec option [@default None];
-      timestampms : Timestamp.ms option [@default None]
+      timestamp : Timestamp.Sec.t option [@default None];
+      timestampms : Timestamp.Ms.t option [@default None]
     } [@@deriving sexp, of_yojson]
 
   type message =

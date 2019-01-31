@@ -102,56 +102,68 @@ end
     by various gemini endpoints. *)
 module Timestamp = struct
 
+  module T0 = struct
+    (** A timestamp is just a core time instance that
+        was converted from some raw json date. *)
+    type t = Time.t [@@deriving sexp]
 
-  (** A timestamp is just a core time instance that
-      was converted from some raw json date. *)
-  type t = Time.t [@@deriving sexp]
+    let to_string t =
+      Time.to_span_since_epoch t |>
+      Time.Span.to_ms |>
+      Float.to_string_hum ~decimals:0
 
-  (** Alias for millisecond granularity timestamps. *)
-  type ms = t [@@deriving sexp]
+    let to_yojson t =
+      to_string t |>
+      fun s -> `String s
 
-  (** Alias for second granularity timestamps. *)
-  type sec = t [@@deriving sexp]
+    let of_yojson_with_span span_fn json =
+      (match json with
+       | `String s ->
+         `Ok (Float.of_string s)
+       | `Int i ->
+         `Ok (Float.of_int i)
+       | `Int64 i ->
+         `Ok (Float.of_int64 i)
+       | #Yojson.Safe.json as json ->
+         `Error json
+      ) |>
+      function
+      | `Error json ->
+        Result.Error
+          (sprintf "expected float as json but got %S"
+             (Yojson.Safe.pretty_to_string json))
+      | `Ok f ->
+        span_fn f |>
+        Time.of_span_since_epoch |>
+        fun ok -> Result.Ok ok
+    let of_yojson (ms:Yojson.Safe.json) =
+      of_yojson_with_span Time.Span.of_ms ms
+    let of_string s = of_yojson (`String s) |> function
+      | Result.Error e -> failwith e | Result.Ok x -> x
+  end
 
-  let to_yojson t =
-    Time.to_span_since_epoch t |>
-    Time.Span.to_ms |>
-    Float.to_string_hum ~decimals:0 |>
-    fun s -> `String s
+  module T = struct
+    include T0
+    include (Csvfields.Csv.Atom(T0) : Csvfields.Csv.Csvable with type t := t)
+  end
 
-  let of_yojson_with_span span_fn json =
-    (match json with
-    | `String s ->
-      `Ok (Float.of_string s)
-    | `Int i ->
-      `Ok (Float.of_int i)
-    | `Int64 i ->
-      `Ok (Float.of_int64 i)
-    | #Yojson.Safe.json as json ->
-      `Error json
-    ) |>
-    function
-     | `Error json ->
-      Result.Error
-        (sprintf "expected float as json but got %S"
-           (Yojson.Safe.pretty_to_string json))
-     | `Ok f ->
-       span_fn f |>
-       Time.of_span_since_epoch |>
-       fun ok -> Result.Ok ok
+  module Ms =
+  struct
+    include T
+    let of_yojson = of_yojson
+    let to_yojson (ms:t) = to_yojson ms
+  end
 
 
-  let of_yojson (ms:Yojson.Safe.json) =
-    of_yojson_with_span Time.Span.of_ms ms
+  module Sec =
+  struct
+    include T
+    let of_yojson (sec:Yojson.Safe.json) =
+      of_yojson_with_span Time.Span.of_sec sec
+    let to_yojson (sec:t) = to_yojson sec
+  end
 
-  let ms_of_yojson = of_yojson
-
-  let ms_to_yojson (ms:ms) = to_yojson ms
-
-  let sec_of_yojson (sec:Yojson.Safe.json) =
-    of_yojson_with_span Time.Span.of_sec sec
-  let sec_to_yojson (sec:sec) = to_yojson sec
-
+  include T
 end
 
 (** Represents currencies supported by Gemini. *)

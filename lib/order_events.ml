@@ -24,7 +24,7 @@ module T = struct
     include (Json.Make(T) : Json.S with type t := t)
   end
 
-  type heartbeat = {timestampms:Timestamp.ms;
+  type heartbeat = {timestampms:Timestamp.Ms.t;
                     sequence:Int_number.t;
                     trace_id:string;
                     socket_sequence:Int_number.t
@@ -123,7 +123,7 @@ end
      behavior:string option [@default None] (* TODO make enum *);
      type_ : Event_type.t [@key "type"] (* TODO make subtype *);
      timestamp:Timestamp.t;
-     timestampms:Timestamp.ms;
+     timestampms:Timestamp.Ms.t;
      is_live : bool;
      is_cancelled : bool;
      is_hidden : bool;
