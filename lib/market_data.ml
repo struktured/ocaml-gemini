@@ -86,18 +86,21 @@ module T = struct
     include (Json.Make(T) : Json.S with type t := t)
   end
 
-  type change_event =
-    {price:decimal_string;
-     side:Side.Bid_ask.t;
-     reason:Reason.t;
-     remaining:decimal_string;
-     delta:decimal_string
-    } [@@deriving sexp, of_yojson]
+  module Change_event = struct
+     type t =
+       {price:Decimal_string.t;
+        side:Side.Bid_ask.t;
+        reason:Reason.t;
+        remaining:Decimal_string.t;
+        delta:Decimal_string.t
+    } [@@deriving sexp, of_yojson, fields, csv]
+  end
+
 
   type trade_event =
-    {tid:int_number;
-     price:decimal_string;
-     amount:decimal_string;
+    {tid:Int_number.t;
+     price:Decimal_string.t;
+     amount:Decimal_string.t;
      maker_side:Side.t [@key "makerSide"]
     } [@@deriving of_yojson, sexp]
 
@@ -122,26 +125,26 @@ module T = struct
   end
 
   type auction_indicative_price_event =
-    {eid:int_number;
+    {eid:Int_number.t;
      result:Auction_result.t;
      time_ms:Timestamp.ms;
-     highest_bid_price:decimal_string;
-     lowest_ask_price:decimal_string;
-     collar_price:decimal_string;
-     indicative_price:decimal_string;
-     indicative_quantity:decimal_string
+     highest_bid_price:Decimal_string.t;
+     lowest_ask_price:Decimal_string.t;
+     collar_price:Decimal_string.t;
+     indicative_price:Decimal_string.t;
+     indicative_quantity:Decimal_string.t
     } [@@deriving sexp, of_yojson]
 
 
   type auction_outcome_event =
-    {eid:int_number;
+    {eid:Int_number.t;
      result:Auction_result.t;
      time_ms:Timestamp.ms;
-     highest_bid_price:decimal_string;
-     lowest_ask_price:decimal_string;
-     collar_price:decimal_string;
-     auction_price:decimal_string;
-     auction_quantity:decimal_string
+     highest_bid_price:Decimal_string.t;
+     lowest_ask_price:Decimal_string.t;
+     collar_price:Decimal_string.t;
+     auction_price:Decimal_string.t;
+     auction_quantity:Decimal_string.t
     } [@@deriving sexp, of_yojson]
 
   module Auction_event_type = struct
@@ -204,7 +207,7 @@ module T = struct
 
 
   type event =
-    [ `Change of change_event
+    [ `Change of Change_event.t
     | `Trade of trade_event
     | `Auction of auction_event
     ] [@@deriving sexp]
@@ -225,7 +228,7 @@ module T = struct
                (List.Assoc.remove ~equal:String.equal assoc "type") in
            (match event_type with
             | `Change ->
-              change_event_of_yojson json' |>
+              Change_event.of_yojson json' |>
               Result.map ~f:(fun event -> `Change event)
             | `Trade ->
               trade_event_of_yojson json' |>
@@ -241,7 +244,7 @@ module T = struct
 
 
   type update =
-    { event_id : int_number [@key "eventId"];
+    { event_id : Int_number.t [@key "eventId"];
       events : event array;
       timestamp : Timestamp.sec option [@default None];
       timestampms : Timestamp.ms option [@default None]
@@ -252,7 +255,7 @@ module T = struct
 
   type response =
     {
-      socket_sequence : int_number;
+      socket_sequence : Int_number.t;
       message : message
     } [@@deriving sexp]
 
@@ -272,7 +275,7 @@ module T = struct
             (Yojson.Safe.to_string json)
         | (Some socket_sequence, Some message_type) ->
           Result.both
-            (int_number_of_yojson socket_sequence)
+            (Int_number.of_yojson socket_sequence)
             (Message_type.of_yojson message_type) |> function
           | Result.Error _ as e -> e
           | Result.Ok (socket_sequence, message_type) ->

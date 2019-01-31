@@ -61,19 +61,22 @@ end
 
 (** An change event to an order. The [reaosn] field indicates
     the type of change. *)
-type change_event = {
-  price : decimal_string;
-  side : Side.Bid_ask.t;
-  reason : Reason.t;
-  remaining : decimal_string;
-  delta : decimal_string;
-} [@@deriving sexp, of_yojson]
+module Change_event :
+sig
+  type t = {
+    price : Decimal_string.t;
+    side : Side.Bid_ask.t;
+    reason : Reason.t;
+    remaining : Decimal_string.t;
+    delta : Decimal_string.t;
+  } [@@deriving sexp, of_yojson, csv, fields]
+end
 
 (** An trade event to an order. *)
 type trade_event = {
-  tid : int_number;
-  price : decimal_string;
-  amount : decimal_string;
+  tid : Int_number.t;
+  price : Decimal_string.t;
+  amount : Decimal_string.t;
   maker_side : Side.t;
 } [@@deriving sexp, of_yojson]
 
@@ -98,26 +101,26 @@ end
 
 (** An auction indicative price event. *)
 type auction_indicative_price_event = {
-  eid : int_number;
+  eid : Int_number.t;
   result : Auction_result.t;
   time_ms : Timestamp.ms;
-  highest_bid_price : decimal_string;
-  lowest_ask_price : decimal_string;
-  collar_price : decimal_string;
-  indicative_price : decimal_string;
-  indicative_quantity : decimal_string;
+  highest_bid_price : Decimal_string.t;
+  lowest_ask_price : Decimal_string.t;
+  collar_price : Decimal_string.t;
+  indicative_price : Decimal_string.t;
+  indicative_quantity : Decimal_string.t;
 }
 
 (** An auction outcome event. *)
 type auction_outcome_event = {
-  eid : int_number;
+  eid : Int_number.t;
   result : Auction_result.t;
   time_ms : Timestamp.ms;
-  highest_bid_price : decimal_string;
-  lowest_ask_price : decimal_string;
-  collar_price : decimal_string;
-  auction_price : decimal_string;
-  auction_quantity : decimal_string;
+  highest_bid_price : Decimal_string.t;
+  lowest_ask_price : Decimal_string.t;
+  collar_price : Decimal_string.t;
+  auction_price : Decimal_string.t;
+  auction_quantity : Decimal_string.t;
 } [@@deriving sexp, of_yojson]
 
 
@@ -142,14 +145,14 @@ type auction_event =
 (** The type of event, unified over auction, change, and trade events. *)
 type event =
   [ `Auction of auction_event
-  | `Change of change_event
+  | `Change of Change_event.t
   | `Trade of trade_event ]
 [@@deriving sexp, of_yojson]
 
 
 (** The type of a market data update message. *)
 type update = {
-  event_id : int_number;
+  event_id : Int_number.t;
   events : event array;
   timestamp : Timestamp.sec option;
   timestampms : Timestamp.ms option;
@@ -164,7 +167,7 @@ type message =
 
 (** The type of a market data response. *)
 type response = {
-  socket_sequence : int_number;
+  socket_sequence : Int_number.t;
   message : message;
 } [@@deriving sexp]
 

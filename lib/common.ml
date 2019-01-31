@@ -4,11 +4,29 @@ module Auth = Auth
 
 module Result = Json.Result
 
-type int_number = int64 [@encoding `number] [@@deriving sexp, yojson]
-type int_string = int64 [@encoding `string] [@@deriving sexp, yojson]
-type decimal_number = float [@encoding `number] [@@deriving sexp, yojson]
-type decimal_string = string [@@deriving sexp, yojson]
+module Int_number = struct
+  type t = int64 [@encoding `number] [@@deriving sexp, yojson]
+  include (Csvfields.Csv.Atom (Int64) :
+             Csvfields.Csv.Csvable with type t := t
+          )
+end
 
+module Int_string = struct
+  type t = int64 [@encoding `string] [@@deriving sexp, yojson]
+  include (Csvfields.Csv.Atom (Int64) :
+             Csvfields.Csv.Csvable with type t := t
+          )
+end
+module Decimal_number = struct
+  type t = float [@encoding `number] [@@deriving sexp, yojson]
+end
+
+module Decimal_string = struct
+  type t = string [@@deriving sexp, yojson]
+  include (Csvfields.Csv.Atom (String) :
+             Csvfields.Csv.Csvable with type t := t
+          )
+end
 (** Represents an order side. *)
 module Side =
 struct

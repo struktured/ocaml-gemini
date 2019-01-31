@@ -24,9 +24,9 @@ end
 
 (** Response type for heart beat messages. *)
 type heartbeat = {timestampms:Timestamp.ms;
-                  sequence:int_number;
+                  sequence:Int_number.t;
                   trace_id:string;
-                  socket_sequence:int_number
+                  socket_sequence:Int_number.t
                  } [@@deriving sexp, yojson]
 
 
@@ -76,11 +76,11 @@ end
 
 (** Type type of an order fill event. *)
 type fill = {
-  trade_id:int_string;
+  trade_id:Int_string.t;
   liquidity:Liquidity.t;
-  price:decimal_string;
-  amount:decimal_string;
-  fee:decimal_string;
+  price:Decimal_string.t;
+  amount:Decimal_string.t;
+  fee:Decimal_string.t;
   fee_currency:Currency.t;
 } [@@deriving sexp, yojson]
 
@@ -107,19 +107,19 @@ type order_event =
    is_live : bool;
    is_cancelled : bool;
    is_hidden : bool;
-   avg_execution_price : decimal_string option [@default None];
-   executed_amount : decimal_string option [@default None];
-   remaining_amount : decimal_string option [@default None];
-   original_amount : decimal_string option [@default None];
-   price : decimal_string option [@default None];
-   total_spend : decimal_string option [@default None];
+   avg_execution_price : Decimal_string.t option [@default None];
+   executed_amount : Decimal_string.t option [@default None];
+   remaining_amount : Decimal_string.t option [@default None];
+   original_amount : Decimal_string.t option [@default None];
+   price : Decimal_string.t option [@default None];
+   total_spend : Decimal_string.t option [@default None];
    fill : fill option [@default None];
-   socket_sequence:int_number
+   socket_sequence:Int_number.t
   } [@@deriving sexp, yojson]
 
 (** The type of a subscription acknowledgement event. *)
 type subscription_ack =
-  {account_id:int_number [@key "accountId"];
+  {account_id:Int_number.t [@key "accountId"];
    subscription_id:string [@key "subscriptionId"];
    symbol_filter:Symbol.t list [@key "symbolFilter"];
    api_session_fiter:string list [@key "apiSessionFilter"];

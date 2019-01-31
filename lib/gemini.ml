@@ -61,16 +61,16 @@ module V1 = struct
         let path = path@["status"]
 
         type request = {
-          order_id:int_number;
+          order_id:Int_number.t;
         } [@@deriving yojson, sexp]
 
         type response = {
           client_order_id : string option [@default None];
-          order_id : int_string;
-          id : int_string;
+          order_id : Int_string.t;
+          id : Int_string.t;
           symbol : Symbol.t;
           exchange : Exchange.t;
-          avg_execution_price : decimal_string;
+          avg_execution_price : Decimal_string.t;
           side : Side.t;
           type_ : Order_type.t [@key "type"];
           timestamp : Timestamp.sec;
@@ -79,11 +79,11 @@ module V1 = struct
           is_cancelled : bool;
           is_hidden : bool;
           was_forced : bool;
-          executed_amount : decimal_string;
-          remaining_amount : decimal_string;
+          executed_amount : Decimal_string.t;
+          remaining_amount : Decimal_string.t;
           options : Order_execution_option.t list;
-          price : decimal_string;
-          original_amount : decimal_string;
+          price : Decimal_string.t;
+          original_amount : Decimal_string.t;
         } [@@deriving yojson, sexp]
       end
       include T
@@ -98,8 +98,8 @@ module V1 = struct
         type request = {
           client_order_id:string;
           symbol:Symbol.t;
-          amount:decimal_string;
-          price:decimal_string;
+          amount:Decimal_string.t;
+          price:Decimal_string.t;
           side:Side.t;
           type_:Order_type.t [@key "type"];
           options: Order_execution_option.t list;
@@ -121,7 +121,7 @@ module V1 = struct
           let name = "by-order-id"
           let path = path
 
-          type request = {order_id:int_string} [@@deriving sexp, yojson]
+          type request = {order_id:Int_string.t} [@@deriving sexp, yojson]
 
           type response = Status.response [@@deriving sexp, of_yojson]
         end
@@ -194,16 +194,16 @@ module V1 = struct
   end
 
   module Mytrades = struct
-    type trade = {price:decimal_string;
-                  amount:decimal_string;
+    type trade = {price:Decimal_string.t;
+                  amount:Decimal_string.t;
                   timestamp:Timestamp.sec;
                   timestampms:Timestamp.ms;
                   type_: Side.t [@key "type"];
                   aggressor: bool;
                   fee_currency: Currency.t;
-                  fee_amount : decimal_string;
-                  tid:int_number;
-                  order_id : int_string;
+                  fee_amount : Decimal_string.t;
+                  tid:Int_number.t;
+                  order_id : Int_string.t;
                   client_order_id : string option [@default None];
                   is_auction_fill : bool;
                   exchange : Exchange.t;
@@ -227,25 +227,25 @@ module V1 = struct
   module Tradevolume = struct
 
     type volume =
-      {account_id:int_number;
+      {account_id:Int_number.t;
        symbol:Symbol.t;
        base_currency:Currency.t;
        notional_currency:Currency.t;
        data_date:string; (*TODO use timestamp or a date module with MMMM-DD-YY *)
-       total_volume_base:decimal_number;
-       maker_buy_sell_ratio:decimal_number;
-       buy_maker_base:decimal_number;
-       buy_maker_notional:decimal_number;
-       buy_maker_count:int_number;
-       sell_maker_base:decimal_number;
-       sell_maker_notional:decimal_number;
-       sell_maker_count:int_number;
-       buy_taker_base:decimal_number;
-       buy_taker_notional:decimal_number;
-       buy_taker_count:int_number;
-       sell_taker_base:decimal_number;
-       sell_taker_notional:decimal_number;
-       sell_taker_count:int_number;
+       total_volume_base:Decimal_number.t;
+       maker_buy_sell_ratio:Decimal_number.t;
+       buy_maker_base:Decimal_number.t;
+       buy_maker_notional:Decimal_number.t;
+       buy_maker_count:Int_number.t;
+       sell_maker_base:Decimal_number.t;
+       sell_maker_notional:Decimal_number.t;
+       sell_maker_count:Int_number.t;
+       buy_taker_base:Decimal_number.t;
+       buy_taker_notional:Decimal_number.t;
+       buy_taker_count:Int_number.t;
+       sell_taker_base:Decimal_number.t;
+       sell_taker_notional:Decimal_number.t;
+       sell_taker_count:Int_number.t;
       } [@@deriving yojson, sexp]
     module T = struct
       let name = "tradevolume"
@@ -266,9 +266,9 @@ module V1 = struct
       type request = unit [@@deriving yojson, sexp]
       type balance =
         {currency:Currency.t;
-         amount:decimal_string;
-         available:decimal_string;
-         available_for_withdrawal:decimal_string
+         amount:Decimal_string.t;
+         available:Decimal_string.t;
+         available_for_withdrawal:Decimal_string.t
              [@key "availableForWithdrawal"];
          type_: string [@key "type"]
         } [@@deriving yojson, sexp]
