@@ -12,7 +12,9 @@
   (libraries
               async
               cohttp-async
+              csvfields
               ppx_deriving_yojson.runtime
+              ppx_csv_conv
               uri
               yojson
               zarith

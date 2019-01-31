@@ -1,5 +1,5 @@
 (** Market data websockets api for the Gemini trading exchange. This
-    broadcasts only public events and require no authentication. 
+    broadcasts only public events and require no authentication.
 *)
 open! Common
 
@@ -10,22 +10,21 @@ sig
   (** Represents a bid or ask side. *)
   module Bid_ask :
   sig
-    type t = [ `Ask | `Bid ] [@@deriving sexp, enumerate, yojson]
-    val to_string : [< t ] -> string
+    type t = [ `Ask | `Bid ] [@@deriving sexp]
+    include Json.S with type t := t
   end
 
   (** Represents an auction style side. *)
   module Auction :
   sig
-    type t = [ `Auction ] [@@deriving sexp, enumerate, yojson]
-    val to_string : [< t ] -> string
+    type t = [ `Auction ] [@@deriving sexp]
+    include Json.S with type t := t
   end
 
   (** A most general type of side- one of [`Bid], [`Ask], or [`Auction]. *)
-  type t = [ Bid_ask.t | Auction.t]
-  [@@deriving sexp, enumerate, yojson]
+  type t = [ Bid_ask.t | Auction.t] [@@deriving sexp]
 
-  val to_string : [< t ] -> string
+  include Json.S with type t := t
 end
 
 (** Represents market data message types supported by the Gemini exchange. *)
@@ -34,18 +33,16 @@ sig
   (* The support message types for order events -
      either [`Update] or [`Heartbeat].
   *)
-  type t = [`Heartbeat | `Update]
-  [@@deriving sexp, yojson, enumerate]
-  val to_string : [< t ] -> string
+  type t = [`Heartbeat | `Update] [@@deriving sexp]
+  include Json.S with type t := t
 end
 
 (** Represents different types of market data events *)
 module Event_type :
 sig
   (** Market data event types. One of  [`Trade], [`Change], and [`Auction]. *)
-  type t = [`Trade | `Change | `Auction]
-  [@@deriving sexp, yojson, enumerate]
-  val to_string : [< t ] -> string
+  type t = [`Trade | `Change | `Auction] [@@deriving sexp]
+  include Json.S with type t := t
 end
 
 (** The heartbeat response type has no payload *)
@@ -58,8 +55,8 @@ sig
   (** Reasons a market data event occured *)
   type t =
     [`Place | `Trade | `Cancel | `Initial]
-  [@@deriving sexp, yojson, enumerate]
-  val to_string : [< t ] -> string
+  [@@deriving sexp]
+  include Json.S with type t := t
 end
 
 (** An change event to an order. The [reaosn] field indicates
@@ -94,8 +91,8 @@ module Auction_result :
 sig
   (** the type of an auction result- one of [`Success] or [`Failure]. *)
   type t =
-    [`Success | `Failure] [@@deriving sexp, enumerate, yojson]
-  val to_string : [<t] -> string
+    [`Success | `Failure] [@@deriving sexp]
+  include Json.S with type t := t
 end
 
 
@@ -131,8 +128,8 @@ sig
   (** Enumerates an auction event type. *)
   type t =
     [ `Auction_open | `Auction_indicative_price | `Auction_outcome ]
-  [@@deriving sexp, enumerate, yojson]
-  val to_string : [<t] -> string
+  [@@deriving sexp]
+  include Json.S with type t := t
 end
 
 (** The type of an auction event, unified over all auction event types. *)

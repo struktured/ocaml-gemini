@@ -9,7 +9,7 @@ struct
         | `Ask -> "ask"
     end
     include T
-    include Json.Make(T)
+    include (Json.Make(T) : Json.S with type t := t)
   end
 
   module Auction = struct
@@ -19,7 +19,7 @@ struct
           `Auction -> "auction"
     end
     include T
-    include Json.Make(T)
+    include (Json.Make(T) : Json.S with type t := t)
   end
 
   module T = struct
@@ -29,7 +29,7 @@ struct
       | #Auction.t as auction -> Auction.to_string auction
   end
   include T
-  include Json.Make(T)
+  include (Json.Make(T) : Json.S with type t := t)
 end
 
 module T = struct
@@ -53,7 +53,7 @@ module T = struct
         | `Heartbeat -> "heartbeat"
     end
     include T
-    include Json.Make(T)
+    include (Json.Make(T) : Json.S with type t := t)
   end
 
   module Event_type = struct
@@ -67,7 +67,7 @@ module T = struct
         | `Auction -> "auction"
     end
     include T
-    include Json.Make(T)
+    include (Json.Make(T) : Json.S with type t := t)
   end
 
   type heartbeat = unit [@@deriving sexp, of_yojson]
@@ -83,7 +83,7 @@ module T = struct
         | `Initial -> "initial"
     end
     include T
-    include Json.Make(T)
+    include (Json.Make(T) : Json.S with type t := t)
   end
 
   type change_event =
@@ -118,7 +118,7 @@ module T = struct
         | `Failure -> "failure"
     end
     include T
-    include Json.Make(T)
+    include (Json.Make(T) : Json.S with type t := t)
   end
 
   type auction_indicative_price_event =
@@ -161,7 +161,7 @@ module T = struct
           "auction_outcome"
     end
     include T
-    include Json.Make(T)
+    include (Json.Make(T) : Json.S with type t := t)
   end
 
   type auction_event =

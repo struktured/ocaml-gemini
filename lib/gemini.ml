@@ -43,7 +43,7 @@ module V1 = struct
 
     end
     include T
-    include Json.Make(T)
+    include (Json.Make(T) : Json.S with type t:= t)
 
   end
 

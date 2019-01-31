@@ -64,10 +64,11 @@ sig
   module Json_result :
   sig
     type t = [ `Error | `Ok ] [@@derivin sexp, yojson, enumerate]
-    val to_string : [< t] -> string
+    val to_string : t -> string
     val dict : (string * t) sexp_list
-    val of_string : string -> t option
-    val split :
+    val of_string : string -> t
+    val of_string_opt : string -> t option
+     val split :
       [< Yojson.Safe.json ] ->
       (t option * [> Yojson.Safe.json ], string) result
   end

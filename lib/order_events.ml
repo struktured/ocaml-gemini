@@ -21,7 +21,7 @@ module T = struct
         | `Heartbeat -> "heartbeat"
     end
     include T
-    include Json.Make(T)
+    include (Json.Make(T) : Json.S with type t := t)
   end
 
   type heartbeat = {timestampms:Timestamp.ms;
@@ -56,7 +56,7 @@ module T = struct
         | `Closed -> "closed"
     end
     include T
-    include Json.Make(T)
+    include (Json.Make(T) : Json.S with type t := t)
   end
 
 
@@ -84,7 +84,7 @@ module T = struct
         | `Initial -> "initial"
     end
     include T
-    include Json.Make(T)
+    include (Json.Make(T) : Json.S with type t := t)
   end
 
   module Liquidity = struct
@@ -95,7 +95,7 @@ module T = struct
     | `Taker -> "Taker"
 end
   include T
-  include Json.Make(T)
+  include (Json.Make(T) : Json.S with type t := t)
   end
 
   type fill = {

@@ -22,7 +22,7 @@ struct
       | `Sell -> "sell"
   end
   include T
-  include Json.Make(T)
+  include (Json.Make(T) : Json.S with type t := t)
 end
 
 
@@ -63,7 +63,7 @@ module Symbol = struct
 
   end
   include T
-  include Json.Make(T)
+  include (Json.Make(T) : Json.S with type t := t)
 
 end
 
@@ -76,7 +76,7 @@ module Exchange = struct
     let to_string `Gemini = "gemini"
   end
   include T
-  include Json.Make(T)
+  include (Json.Make(T) : Json.S with type t := t)
 end
 
 
@@ -155,7 +155,7 @@ module Currency = struct
       | `Ltc -> "ltc"
   end
   include T
-  include Json.Make(T)
+  include (Json.Make(T) : Json.S with type t := t)
 
 end
 
@@ -171,7 +171,7 @@ module Order_type = struct
       | `Exchange_limit -> "exchange limit"
   end
   include T
-  include Json.Make(T)
+  include (Json.Make(T) : Json.S with type t := t)
 
 end
 

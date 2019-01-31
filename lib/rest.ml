@@ -41,7 +41,7 @@ module Response = struct
       | `Ok -> "ok"
     end
     include T
-    include Json.Make(T)
+    include (Json.Make(T) : Json.S with type t := t)
 
     let split = function
       | `Assoc assoc as json ->
