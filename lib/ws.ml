@@ -82,18 +82,26 @@ struct
     let dir = match dir with
       | None -> Core.Unix.getcwd ()
       | Some dir -> dir in
-    Event_type.Map.find_multi t event_type |>
-    List.fold ~init:0
+    let filename = Filename.concat
+        dir
+        (sprintf "%s.csv" (Event_type.to_string event_type))
+    in
+    Out_channel.with_file
+      ~append:true
+      ~binary:false
+      ~fail_if_exists:false
+      filename
       ~f:
-        (fun acc (module Event : EVENT_CSVABLE) ->
-           let filename = Filename.concat
-               dir
-               (sprintf "%s.csv" (Event_type.to_string event_type))
-           in
-           let events = Event.events in
-           let len = List.length events in
-           Event.csv_save filename events;
-           acc + len
+        (fun out ->
+           Event_type.Map.find_multi t event_type |>
+           List.fold ~init:0
+             ~f:
+               (fun acc (module Event : EVENT_CSVABLE) ->
+                  let events = Event.events in
+                  let len = List.length events in
+                  Event.csv_save_out out events;
+                  acc + len
+               )
         )
 
   let all (t:t) =

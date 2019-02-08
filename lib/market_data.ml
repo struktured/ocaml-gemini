@@ -324,7 +324,10 @@ end
         ~f:
           (fun csv_of_events (event:event) ->
              (match event with
-              | `Change _change -> csv_of_events
+              | `Change change ->
+                Csv_of_event.add' csv_of_events `Change
+                  (module Change_event)
+                  [change]
               | `Trade trade ->
                 Csv_of_event.add' csv_of_events `Trade
                   (module Trade_event)
