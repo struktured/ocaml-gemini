@@ -363,7 +363,7 @@ let command =
       Channel.sexp_of_response response |>
       Sexp.to_string_hum |>
       sprintf "%s\n" in
-    let channel_to_csv_str response =
+    let append_to_csv response =
       let events = Channel.events_of_response response in
       let all = Channel.Csv_of_event.write_all ?dir:csv events in
       let tags = List.map all ~f:(fun (k, v) ->
@@ -373,7 +373,7 @@ let command =
       Log.Global.debug ~tags "wrote csv response events";
       () in
     let pipe_reader response =
-      channel_to_csv_str response;
+      append_to_csv response;
       channel_to_sexp_str response in
     client (module Cfg)
       ?query ?uri_args ~nonce () >>= fun pipe ->

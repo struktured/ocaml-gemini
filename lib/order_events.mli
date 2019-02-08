@@ -31,7 +31,7 @@ type heartbeat = {timestampms:Timestamp.Ms.t;
 
 
 (** Represents different order event types. *)
-module Event_type : sig
+module Order_event_type : sig
 
   (** Enumerates all possible order events. *)
   type t = [ `Subscription_ack
@@ -51,11 +51,11 @@ module Event_type : sig
 end
 
 (** Events can be filtered by symbol using [Symbol_filter symbol] or
-    for an event type using [Event_type_filter event_type] or using
+    for an event type using [Order_event_type_filter event_type] or using
     an api session filter [Api_session_filter session-id].
 *)
 type query = [ `Symbol_filter of Symbol.t
-             | `Event_type_filter of Event_type.t
+             | `Event_type_filter of Order_event_type.t
              | `Api_session_filter of string
              ] [@@deriving sexp]
 
@@ -63,6 +63,13 @@ type query = [ `Symbol_filter of Symbol.t
 module Reason : sig
   type t =
     [`Place | `Trade | `Cancel | `Initial] [@@deriving sexp, enumerate]
+  include Json.ENUM_STRING with type t := t
+end
+
+
+module Reject_reason :
+sig
+  type t = [`Invalid_quantity] [@@deriving sexp, enumerate]
   include Json.ENUM_STRING with type t := t
 end
 
@@ -106,9 +113,10 @@ type t =
    event_id:string option [@default None];
    order_type:Order_type.t;
    symbol:Symbol.t;
+   reason:Reject_reason.t option [@default None];
    side:Side.t;
    behavior:string option [@default None];
-   type_ : Event_type.t [@key "type"];
+   type_ : Order_event_type.t [@key "type"];
    timestamp:Timestamp.t;
    timestampms:Timestamp.Ms.t;
    is_live : bool;
@@ -132,7 +140,7 @@ type t =
    subscription_id:string [@key "subscriptionId"];
    symbol_filter:Symbol.t list [@key "symbolFilter"];
    api_session_fiter:string list [@key "apiSessionFilter"];
-   event_type_filter:Event_type.t list [@key "eventTypeFilter"]
+   event_type_filter:Order_event_type.t list [@key "eventTypeFilter"]
   } [@@deriving sexp, yojson, fields, csv]
 end
 (** The response type for any order message. *)
@@ -142,6 +150,14 @@ type response =
   | `Order_event of Order_event.t
   | `Order_events of Order_event.t list
   ] [@@deriving sexp]
+
+module Event_type : sig
+  type t = [`Order_event | `Subscription_ack]
+  [@@deriving sexp, enumerate, compare]
+  include Comparable.S with type t := t
+  include Json.S with type t := t
+end
+
 
 include Ws.CHANNEL
   with module Event_type := Event_type

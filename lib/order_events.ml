@@ -30,7 +30,7 @@ module T = struct
                     socket_sequence:Int_number.t
                    } [@@deriving sexp, yojson]
 
- module Event_type = struct
+ module Order_event_type = struct
     module T = struct
 
       type t = [ `Subscription_ack
@@ -63,7 +63,7 @@ module T = struct
 
  type query =
    [ `Symbol_filter of Symbol.t
-   | `Event_type_filter of Event_type.t
+   | `Event_type_filter of Order_event_type.t
    | `Api_session_filter of string
    ] [@@deriving sexp]
 
@@ -71,7 +71,7 @@ module T = struct
       | `Symbol_filter symbol ->
         "symbolFilter", Symbol.to_string symbol
       | `Event_type_filter event_type ->
-        "eventTypeFilter", Event_type.to_string event_type
+        "eventTypeFilter", Order_event_type.to_string event_type
       | `Api_session_filter session ->
         "apiSessionFilter", session
 
@@ -84,6 +84,17 @@ module T = struct
         | `Trade -> "trade"
         | `Cancel -> "cancel"
         | `Initial -> "initial"
+    end
+    include T
+    include (Json.Make(T) : Json.S with type t := t)
+  end
+
+   module Reject_reason = struct
+    module T = struct
+      type t =
+        [`Invalid_quantity] [@@deriving sexp, enumerate]
+      let to_string = function
+        | `Invalid_quantity -> "InvalidQuantity"
     end
     include T
     include (Json.Make(T) : Json.S with type t := t)
@@ -123,18 +134,25 @@ end
       (Csv_support.Optional.Default_args(Decimal_string))
 
 
-  (* TODO unimplemented - need to support nested/inlined csvs *)
   module Fill_option =
   struct
     module T =
     struct
       type t = Fill.t option [@@deriving yojson, sexp]
-      let of_string _ = None
-      let to_string _ = ""
+      let of_string  = function
+        | "" -> None
+        | s -> String.split ~on:' ' s |> Fill.t_of_row |> Option.some
+
+      let to_string = function
+        | None -> ""
+        | Some fill -> Fill.row_of_t fill |> String.concat ~sep:" "
     end
     include T
     include (Csvfields.Csv.Atom(T) :  Csvfields.Csv.Csvable with type t := t)
   end
+
+  module Reject_reason_option =
+    Csv_support.Optional.Make_default(Reject_reason)
 
   module Order_event = struct
     open Csv_support
@@ -145,9 +163,10 @@ end
      event_id:Optional.String.t [@default None];
      order_type:Order_type.t;
      symbol:Symbol.t;
+     reason:Reject_reason_option.t [@default None];
      side:Side.t;
      behavior:Optional.String.t [@default None] (* TODO make enum *);
-     type_ : Event_type.t [@key "type"];
+     type_ : Order_event_type.t [@key "type"];
      timestamp:Timestamp.t;
      timestampms:Timestamp.Ms.t;
      is_live : bool;
@@ -159,12 +178,12 @@ end
      original_amount : Decimal_string_option.t [@default None];
      price : Decimal_string_option.t [@default None];
      total_spend : Decimal_string_option.t [@default None];
-     fill : Fill_option.t;
+     fill : Fill_option.t [@default None];
      socket_sequence:Int_number.t
     } [@@deriving sexp, yojson, fields, csv]
 end
 
-module Event_type_list = Csv_support.List.Make_default(Event_type)
+module Event_type_list = Csv_support.List.Make_default(Order_event_type)
 module Symbol_list = Csv_support.List.Make_default(Symbol)
 
 module Subscription_ack = struct
@@ -198,7 +217,7 @@ let response_of_yojson :
        | Some event_type ->
          Log.Global.debug "found type in event payload: %s"
            (Yojson.Safe.to_string json);
-          Event_type.of_yojson event_type |> function
+          Order_event_type.of_yojson event_type |> function
          | Result.Error _ as e -> e
          | Result.Ok event_type ->
            let json' = `Assoc
@@ -210,7 +229,7 @@ let response_of_yojson :
             | `Subscription_ack ->
               Subscription_ack.of_yojson json' |>
               Result.map ~f:(fun event -> `Subscription_ack event)
-            | #Event_type.t ->
+            | #Order_event_type.t ->
               Order_event.of_yojson json |>
               Result.map ~f:(fun event -> `Order_event event)
            )
@@ -225,15 +244,39 @@ let response_of_yojson :
         (Yojson.Safe.to_string json)
 
 
+  module Event_type = struct
+    module T =
+    struct
+      type t = [`Order_event | `Subscription_ack]
+      [@@deriving sexp, yojson, enumerate, compare]
+
+      let to_string = function
+        | `Order_event -> "order_event"
+        | `Subscription_ack -> "subscription_ack"
+    end
+
+    include T
+    include Comparable.Make(T)
+    include (Json.Make(T) : Json.S with type t := t)
+  end
+
   module Csv_of_event = Ws.Csv_of_event(Event_type)
   let events_of_response (response:response) =
     let csv_of_event = Csv_of_event.empty in
     match response with
-    | `Order_event _ -> csv_of_event
+    | `Order_event order_event ->
+      Csv_of_event.add' csv_of_event `Order_event
+        (module Order_event) [order_event]
     | `Heartbeat _ -> csv_of_event
-    | `Order_events _ ->  csv_of_event
-    | `Subscription_ack _ -> csv_of_event
+    | `Order_events order_events ->
+      Csv_of_event.add' csv_of_event `Order_event
+        (module Order_event) order_events
+    | `Subscription_ack ack ->
+      Csv_of_event.add' csv_of_event `Subscription_ack
+        (module Subscription_ack) [ack]
+
 end
+
 include T
 include Ws.Make(T)
 
