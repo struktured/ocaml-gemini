@@ -28,6 +28,8 @@ depends: [
   "zarith"
   "nocrypto"
   "ppx_deriving_yojson"
+  "ppx_csv_conv"
+  "csvfields"
   "websocket-async"
   "expect_test_helpers"
 ]
