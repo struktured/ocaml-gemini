@@ -344,7 +344,7 @@ let command =
     | _ -> ()
   in
   let run cfg
-      loglevel query (csv:string option) uri_args () =
+      loglevel query (csv_dir:string option) uri_args () =
     let cfg = Cfg.or_default cfg in
     let module Cfg = (val cfg:Cfg.S) in
     Option.iter loglevel ~f:set_loglevel;
@@ -365,7 +365,7 @@ let command =
       sprintf "%s\n" in
     let append_to_csv response =
       let events = Channel.events_of_response response in
-      let all = Channel.Csv_of_event.write_all ?dir:csv events in
+      let all = Channel.Csv_of_event.write_all ?dir:csv_dir events in
       let tags = List.map all ~f:(fun (k, v) ->
           Channel.Event_type.to_string k,
           Int.to_string v
