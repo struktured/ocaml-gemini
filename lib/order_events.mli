@@ -43,9 +43,11 @@ module Event_type : sig
            | `Fill
            | `Cancelled
            | `Closed
-           ] [@@deriving sexp, enumerate]
+           ] [@@deriving sexp, enumerate, compare]
 
-  include Json.ENUM_STRING with type t:= t
+  include Json.S with type t := t
+  include Comparable with type t := t
+
 end
 
 (** Events can be filtered by symbol using [Symbol_filter symbol] or
@@ -75,14 +77,17 @@ module Liquidity : sig
 end
 
 (** Type type of an order fill event. *)
-type fill = {
-  trade_id:Int_string.t;
-  liquidity:Liquidity.t;
-  price:Decimal_string.t;
-  amount:Decimal_string.t;
-  fee:Decimal_string.t;
-  fee_currency:Currency.t;
-} [@@deriving sexp, yojson]
+module Fill :
+sig
+  type t = {
+    trade_id:Int_string.t;
+    liquidity:Liquidity.t;
+    price:Decimal_string.t;
+    amount:Decimal_string.t;
+    fee:Decimal_string.t;
+    fee_currency:Currency.t;
+  } [@@deriving sexp, yojson, fields, csv]
+end
 
 (** Represents an api session name *)
 module Api_session : sig
@@ -91,8 +96,10 @@ module Api_session : sig
   type t = string [@@deriving sexp, yojson]
 end
 
+
+module Order_event : sig
 (** The type of an order event. *)
-type order_event =
+type t =
   {order_id:string;
    api_session:Api_session.t;
    client_order_id:string option [@default None];
@@ -113,28 +120,31 @@ type order_event =
    original_amount : Decimal_string.t option [@default None];
    price : Decimal_string.t option [@default None];
    total_spend : Decimal_string.t option [@default None];
-   fill : fill option [@default None];
+   fill : Fill.t option [@default None];
    socket_sequence:Int_number.t
-  } [@@deriving sexp, yojson]
+  } [@@deriving sexp, yojson, fields, csv]
+end
 
+module Subscription_ack : sig
 (** The type of a subscription acknowledgement event. *)
-type subscription_ack =
+type t =
   {account_id:Int_number.t [@key "accountId"];
    subscription_id:string [@key "subscriptionId"];
    symbol_filter:Symbol.t list [@key "symbolFilter"];
    api_session_fiter:string list [@key "apiSessionFilter"];
    event_type_filter:Event_type.t list [@key "eventTypeFilter"]
-  } [@@deriving sexp, yojson]
-
+  } [@@deriving sexp, yojson, fields, csv]
+end
 (** The response type for any order message. *)
 type response =
-  [ `Subscription_ack of subscription_ack
+  [ `Subscription_ack of Subscription_ack.t
   | `Heartbeat of heartbeat
-  | `Order_event of order_event
-  | `Order_events of order_event list
+  | `Order_event of Order_event.t
+  | `Order_events of Order_event.t list
   ] [@@deriving sexp]
 
 include Ws.CHANNEL
+  with module Event_type := Event_type
   with type uri_args := uri_args
   with type query := query
   with type response := response

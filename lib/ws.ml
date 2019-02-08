@@ -1,5 +1,114 @@
 (** Websocket api support for the gemini trading exchange. *)
 
+module type CSVABLE = Csvfields.Csv.Csvable
+
+module type EVENT_CSVABLE = sig
+  include CSVABLE
+  val events : t list
+end
+
+module type CSV_OF_EVENTS =
+sig
+  module Event_type : sig include Json.S val equal : t -> t -> bool end
+  type t
+  val empty : t
+  val add :
+    t ->
+    Event_type.t ->
+    (module EVENT_CSVABLE) ->
+    t
+
+  val add' :
+    t ->
+    Event_type.t ->
+    (module CSVABLE with type t = 'a) ->
+    'a list -> t
+
+  val csv_header :
+    t ->
+    Event_type.t -> string list option
+
+  val get : t -> Event_type.t -> string list list
+  val all : t -> (Event_type.t * string list list) list
+
+ val write :
+   ?dir:string -> t -> Event_type.t -> int
+
+ val write_all :
+   ?dir:string -> t -> (Event_type.t * int) list
+end
+
+module Csv_of_event(
+    Event_type :
+    sig
+      include Json.S
+      include Comparable with type t := t
+    end) : CSV_OF_EVENTS with module Event_type = Event_type =
+struct
+  type t =
+    (module EVENT_CSVABLE) list Event_type.Map.t
+
+  let empty : t = Event_type.Map.empty
+  module Event_type = Event_type
+
+  let add (t:t)
+     (event_type : Event_type.t)
+     (module Event : EVENT_CSVABLE) =
+    Event_type.Map.add_multi t ~key:event_type
+      ~data:(module Event : EVENT_CSVABLE)
+
+  let add' (t:t)
+      (type event)
+      (event_type : Event_type.t)
+      (module Event : CSVABLE with type t = event)
+      (events:event list) =
+    let module E = struct include Event let events = events end in
+    add t event_type (module E)
+
+  let csv_header (t:t) event_type =
+    Event_type.Map.find_multi t event_type |>
+    List.hd |>
+    Option.map
+      ~f:(fun (module Event : EVENT_CSVABLE) -> Event.csv_header)
+
+  let get (t:t) (event_type:Event_type.t) =
+    Event_type.Map.find_multi t event_type |>
+    List.concat_map ~f:
+      (fun (module Event : EVENT_CSVABLE) ->
+         Event.events |> List.map ~f:Event.row_of_t
+      )
+
+  let write ?dir (t:t) (event_type:Event_type.t) =
+    let dir = match dir with
+      | None -> Core.Unix.getcwd ()
+      | Some dir -> dir in
+    Event_type.Map.find_multi t event_type |>
+    List.fold ~init:0
+      ~f:
+        (fun acc (module Event : EVENT_CSVABLE) ->
+           let filename = Filename.concat
+               dir
+               (sprintf "%s.csv" (Event_type.to_string event_type))
+           in
+           let events = Event.events in
+           let len = List.length events in
+           Event.csv_save filename events;
+           acc + len
+        )
+
+  let all (t:t) =
+    List.filter_map Event_type.all
+      ~f:
+        (fun e -> match (get t e) with
+          | [] -> None
+          | x -> Some (e,x)
+        )
+
+  let write_all ?dir (t:t) =
+    List.map Event_type.all
+      ~f:(fun e -> e, write ?dir t e)
+end
+
 (** Specification for a websocket channel. *)
 module type CHANNEL = sig
   (** The name of the channel *)
@@ -31,6 +140,17 @@ module type CHANNEL = sig
   (** Repsone type of the channel. Must have sexp converters
       and a yojson parser *)
   type response [@@deriving sexp, of_yojson]
+
+
+  module Event_type :
+   sig include Json.S val equal : t -> t -> bool end
+
+  module Csv_of_event :
+    CSV_OF_EVENTS with module Event_type = Event_type
+  (** Given a response value produce csvable events
+      modularized by event type. *)
+  val events_of_response :
+    response -> Csv_of_event.t
 
   (** Query parameters for the channel *)
   type query [@@deriving sexp]
@@ -199,12 +319,15 @@ let handle_client addr reader writer =
   ]
 
 let command =
-  let spec =
+  let spec : (_,_) Command.Spec.t =
     let open Command.Spec in
     empty
     +> Cfg.param
     +> flag "-loglevel" (optional int) ~doc:"1-3 loglevel"
-    +> flag "-query" (listed sexp) ~doc:"str query parameters"
+    +> flag "-query" (listed sexp) ~doc:"QUERY query parameters"
+    +> flag "-csv-dir" (optional string)
+      ~doc:"PATH output each event type to a separate csv file at PATH.\
+            Defaults to current directory."
     +> anon (maybe ("uri_args" %: sexp))
  in
   let set_loglevel = function
@@ -213,7 +336,7 @@ let command =
     | _ -> ()
   in
   let run cfg
-      loglevel query uri_args () =
+      loglevel query (csv:string option) uri_args () =
     let cfg = Cfg.or_default cfg in
     let module Cfg = (val cfg:Cfg.S) in
     Option.iter loglevel ~f:set_loglevel;
@@ -228,25 +351,28 @@ let command =
       Nonce.File.(pipe ~init:default_filename) () in
     Log.Global.info "Initiating channel %s with path %s"
       Channel.name (Path.to_string Channel.path);
+    let channel_to_sexp_str response =
+      Channel.sexp_of_response response |>
+      Sexp.to_string_hum |>
+      sprintf "%s\n" in
+    let channel_to_csv_str response =
+      let events = Channel.events_of_response response in
+      let all = Channel.Csv_of_event.write_all ?dir:csv events in
+      let tags = List.map all ~f:(fun (k, v) ->
+          Channel.Event_type.to_string k,
+          Int.to_string v
+        ) in
+      Log.Global.debug ~tags "wrote csv response events";
+      () in
+    let pipe_reader response =
+      channel_to_csv_str response;
+      channel_to_sexp_str response in
     client (module Cfg)
       ?query ?uri_args ~nonce () >>= fun pipe ->
-    Log.Global.info "Broadcasting channel %s to stderr..." Channel.name;
+    Log.Global.debug "Broadcasting channel %s to stderr..." Channel.name;
       Pipe.transfer pipe
-        (*(Pipe.map pipe
-           ~f:
-             (fun s ->
-                Channel.sexp_of_response s |>
-                Sexp.to_string_hum |>
-                printf "%s\n"
-             )
-        )*)
         Writer.(pipe (Lazy.force stderr))
-        ~f:
-          (fun s ->
-                Channel.sexp_of_response s |>
-                Sexp.to_string_hum |>
-                sprintf "%s\n"
-          )
+        ~f:pipe_reader
   in
   Channel.name,
   Command.async_spec

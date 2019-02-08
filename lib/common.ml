@@ -26,6 +26,8 @@ module Decimal_string = struct
   include (Csvfields.Csv.Atom (String) :
              Csvfields.Csv.Csvable with type t := t
           )
+  let of_string t = t
+  let to_string t = t
 end
 (** Represents an order side. *)
 module Side =

@@ -59,7 +59,7 @@ module T = struct
   module Event_type = struct
     module T = struct
       type t = [`Trade | `Change | `Auction]
-      [@@deriving sexp, enumerate]
+      [@@deriving sexp, enumerate, compare]
 
       let to_string = function
         | `Trade -> "trade"
@@ -67,6 +67,7 @@ module T = struct
         | `Auction -> "auction"
     end
     include T
+    include Comparable.Make(T)
     include (Json.Make(T) : Json.S with type t := t)
   end
 
@@ -175,7 +176,8 @@ end
     include (Json.Make(T) : Json.S with type t := t)
   end
 
-  type auction_event =
+  module Auction_event = struct
+  type t =
     [
       | `Auction_open of Auction_open_event.t
       | `Auction_indicative_price of
@@ -183,8 +185,9 @@ end
       | `Auction_outcome of Auction_outcome_event.t
     ] [@@deriving sexp]
 
-  let auction_event_of_yojson :
-    Yojson.Safe.json -> (auction_event, string) Result.t = function
+
+  let of_yojson :
+    Yojson.Safe.json -> (t, string) Result.t = function
     | `Assoc assoc as json ->
       (List.Assoc.find assoc ~equal:String.equal
          "type" |> function
@@ -212,12 +215,12 @@ end
     | #Yojson.Safe.json as json ->
       Result.failf "expected association type in json payload: %s"
         (Yojson.Safe.to_string json)
-
+end
 
   type event =
     [ `Change of Change_event.t
     | `Trade of Trade_event.t
-    | `Auction of auction_event
+    | `Auction of Auction_event.t
     ] [@@deriving sexp]
 
   let event_of_yojson :
@@ -242,7 +245,7 @@ end
               Trade_event.of_yojson json' |>
               Result.map ~f:(fun event -> `Trade event)
             | `Auction ->
-              auction_event_of_yojson json' |>
+              Auction_event.of_yojson json' |>
               Result.map ~f:(fun event -> `Auction event)
            )
       )
@@ -311,6 +314,24 @@ end
                     in json payload: %s"
         (Yojson.Safe.to_string json)
 
+  module Csv_of_event = Ws.Csv_of_event(Event_type)
+  let events_of_response (response:response) =
+    let csv_of_events = Csv_of_event.empty in
+    match response.message with
+    | `Heartbeat _ -> csv_of_events
+    | `Update (update:update) ->
+      Array.fold ~init:csv_of_events update.events
+        ~f:
+          (fun csv_of_events (event:event) ->
+             (match event with
+              | `Change _change -> csv_of_events
+              | `Trade trade ->
+                Csv_of_event.add' csv_of_events `Trade
+                  (module Trade_event)
+                  [trade]
+              | `Auction _auction -> csv_of_events
+             )
+          )
 end
 include T
 include Ws.Make_no_request(T)

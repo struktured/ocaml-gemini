@@ -43,6 +43,7 @@ sig
   (** Market data event types. One of  [`Trade], [`Change], and [`Auction]. *)
   type t = [`Trade | `Change | `Auction] [@@deriving sexp]
   include Json.S with type t := t
+  include Comparable with type t := t
 end
 
 (** The heartbeat response type has no payload *)
@@ -146,16 +147,18 @@ sig
   include Json.S with type t := t
 end
 
+module Auction_event : sig
 (** The type of an auction event, unified over all auction event types. *)
-type auction_event =
+type t =
   [ `Auction_indicative_price of Auction_indicative_price_event.t
   | `Auction_open of Auction_open_event.t
   | `Auction_outcome of Auction_outcome_event.t ]
 [@@deriving sexp, of_yojson]
+end
 
 (** The type of event, unified over auction, change, and trade events. *)
 type event =
-  [ `Auction of auction_event
+  [ `Auction of Auction_event.t
   | `Change of Change_event.t
   | `Trade of Trade_event.t ]
 [@@deriving sexp, of_yojson]
@@ -183,6 +186,7 @@ type response = {
 } [@@deriving sexp]
 
 include Ws.CHANNEL
+  with module Event_type := Event_type
   with type uri_args = Symbol.t
   with type query = unit
   with type response := response
