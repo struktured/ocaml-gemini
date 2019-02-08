@@ -58,13 +58,15 @@ module T = struct
 
   module Event_type = struct
     module T = struct
-      type t = [`Trade | `Change | `Auction]
+      type t = [`Trade | `Change | `Auction | `Block_trade]
       [@@deriving sexp, enumerate, compare]
 
       let to_string = function
         | `Trade -> "trade"
         | `Change -> "change"
         | `Auction -> "auction"
+        | `Block_trade -> "block_trade"
+
     end
     include T
     include Comparable.Make(T)
@@ -99,13 +101,20 @@ module T = struct
 
 
   module Trade_event = struct
-  type t =
-    {tid:Int_number.t;
-     price:Decimal_string.t;
-     amount:Decimal_string.t;
-     maker_side:Side.t [@key "makerSide"]
-    } [@@deriving of_yojson, sexp, fields, csv]
-end
+    type t =
+      {tid:Int_number.t;
+       price:Decimal_string.t;
+       amount:Decimal_string.t;
+       maker_side:Side.t [@key "makerSide"]
+      } [@@deriving of_yojson, sexp, fields, csv]
+  end
+
+ module Block_trade_event = struct
+   type t =
+     {price:Decimal_string.t;
+      amount:Decimal_string.t
+     } [@@deriving of_yojson, sexp, fields, csv]
+ end
 
  module Auction_open_event = struct
   type t =
@@ -221,10 +230,11 @@ end
     [ `Change of Change_event.t
     | `Trade of Trade_event.t
     | `Auction of Auction_event.t
+    | `Block_trade of Block_trade_event.t
     ] [@@deriving sexp]
 
   let event_of_yojson :
-    Yojson.Safe.json -> (event,string) Result.t = function
+    Yojson.Safe.json -> (event, string) Result.t = function
     | `Assoc assoc as json ->
       (List.Assoc.find assoc ~equal:String.equal
          "type" |> function
@@ -247,6 +257,9 @@ end
             | `Auction ->
               Auction_event.of_yojson json' |>
               Result.map ~f:(fun event -> `Auction event)
+            | `Block_trade ->
+              Block_trade_event.of_yojson json' |>
+              Result.map ~f:(fun event -> `Block_trade event)
            )
       )
     | #Yojson.Safe.json as json ->
@@ -315,6 +328,7 @@ end
         (Yojson.Safe.to_string json)
 
   module Csv_of_event = Ws.Csv_of_event(Event_type)
+
   let events_of_response (response:response) =
     let csv_of_events = Csv_of_event.empty in
     match response.message with
@@ -333,6 +347,10 @@ end
                   (module Trade_event)
                   [trade]
               | `Auction _auction -> csv_of_events
+              | `Block_trade block_trade ->
+                Csv_of_event.add' csv_of_events `Block_trade
+                  (module Block_trade_event)
+                  [block_trade]
              )
           )
 end

@@ -40,8 +40,10 @@ end
 (** Represents different types of market data events *)
 module Event_type :
 sig
-  (** Market data event types. One of  [`Trade], [`Change], and [`Auction]. *)
-  type t = [`Trade | `Change | `Auction] [@@deriving sexp]
+  (** Market data event types. One of  [`Trade], [`Change], [`Auction],
+      or [`Block_trade].
+  *)
+  type t = [`Trade | `Change | `Auction | `Block_trade] [@@deriving sexp]
   include Json.S with type t := t
   include Comparable with type t := t
 end
@@ -73,7 +75,7 @@ sig
   } [@@deriving sexp, of_yojson, csv, fields]
 end
 
-(** An trade event to an order. *)
+(** An trade event of an order. *)
 module Trade_event :
 sig
   type t = {
@@ -81,6 +83,15 @@ sig
     price : Decimal_string.t;
     amount : Decimal_string.t;
     maker_side : Side.t;
+  } [@@deriving sexp, of_yojson, fields, csv]
+end
+
+(** A block trade event. *)
+module Block_trade_event :
+sig
+  type t = {
+    price : Decimal_string.t;
+    amount : Decimal_string.t;
   } [@@deriving sexp, of_yojson, fields, csv]
 end
 
@@ -160,7 +171,9 @@ end
 type event =
   [ `Auction of Auction_event.t
   | `Change of Change_event.t
-  | `Trade of Trade_event.t ]
+  | `Trade of Trade_event.t
+  | `Block_trade of Block_trade_event.t
+  ]
 [@@deriving sexp, of_yojson]
 
 
