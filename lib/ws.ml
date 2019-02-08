@@ -334,8 +334,8 @@ let command =
     +> flag "-loglevel" (optional int) ~doc:"1-3 loglevel"
     +> flag "-query" (listed sexp) ~doc:"QUERY query parameters"
     +> flag "-csv-dir" (optional string)
-      ~doc:"PATH output each event type to a separate csv file at PATH.\
-            Defaults to current directory."
+      ~doc:"PATH output each event type to a separate csv file at PATH. \
+             Defaults to current directory."
     +> anon (maybe ("uri_args" %: sexp))
  in
   let set_loglevel = function
