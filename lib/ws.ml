@@ -78,7 +78,8 @@ struct
          Event.events |> List.map ~f:Event.row_of_t
       )
 
-  let write ?dir (t:t) (event_type:Event_type.t) =
+  let write
+      ?dir (t:t) (event_type:Event_type.t) =
     let dir = match dir with
       | None -> Core.Unix.getcwd ()
       | Some dir -> dir in
@@ -86,6 +87,20 @@ struct
         dir
         (sprintf "%s.csv" (Event_type.to_string event_type))
     in
+    let header =
+      try
+        let stat = Core.Unix.stat filename in
+        if Int64.(equal stat.st_size zero) then
+          csv_header t event_type
+        else
+          (
+            Log.Global.debug "ws: no csv header";
+            None
+          )
+      with
+      | _error ->
+        Log.Global.debug "ws: getting csv header";
+        csv_header t event_type in
     Out_channel.with_file
       ~append:true
       ~binary:false
@@ -93,6 +108,10 @@ struct
       filename
       ~f:
         (fun out ->
+           Option.iter header ~f:
+             (fun header ->
+                Csv_support.write_header out header
+             );
            Event_type.Map.find_multi t event_type |>
            List.fold ~init:0
              ~f:

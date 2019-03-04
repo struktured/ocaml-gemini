@@ -113,4 +113,12 @@ module List = struct
         end
         )
       )
+
 end
+
+let write_header out header =
+  let s = sprintf "%s\n" (String.concat ~sep:"," header) in
+  Log.Global.debug "csv_support: writing header: %s" s;
+  Out_channel.output_string out s
+
+
