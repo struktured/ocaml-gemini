@@ -4,7 +4,7 @@
   (libraries gemini)
   (modules cli)
   (package gemini)
-  (flags 
+  (flags
     :standard
     -open Core
     -open Async
