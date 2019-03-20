@@ -5,7 +5,7 @@ let () =
 
 #use "topfind";;
 #thread;;
-#require "core hex async cohttp.async nocrypto ppx_deriving.runtime ppx_deriving_yojson.runtime ppx_inline_test.runtime-lib ppx_jane zarith uri yojson websocket-async";;
+#require "core hex async csvfields cohttp.async nocrypto ppx_deriving.runtime ppx_deriving_yojson.runtime ppx_inline_test.runtime-lib ppx_jane zarith uri yojson websocket-async";;
 
 #load "compiler-libs/ocamlcommon.cma";;
 
