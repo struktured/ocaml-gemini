@@ -24,7 +24,7 @@ depends: [
   "ppx_jane"
   "uri"
   "hex"
-  "yojson"
+  "yojson" {>= "1.7.0"}
   "zarith"
   "nocrypto"
   "ppx_deriving_yojson"

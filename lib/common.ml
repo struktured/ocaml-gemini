@@ -126,7 +126,7 @@ module Timestamp = struct
          `Ok (Float.of_int i)
        | `Int64 i ->
          `Ok (Float.of_int64 i)
-       | #Yojson.Safe.json as json ->
+       | #Yojson.Safe.t as json ->
          `Error json
       ) |>
       function
@@ -138,7 +138,7 @@ module Timestamp = struct
         span_fn f |>
         Time.of_span_since_epoch |>
         fun ok -> Result.Ok ok
-    let of_yojson (ms:Yojson.Safe.json) =
+    let of_yojson (ms:Yojson.Safe.t) =
       of_yojson_with_span Time.Span.of_ms ms
     let of_string s = of_yojson (`String s) |> function
       | Result.Error e -> failwith e | Result.Ok x -> x
@@ -160,7 +160,7 @@ module Timestamp = struct
   module Sec =
   struct
     include T
-    let of_yojson (sec:Yojson.Safe.json) =
+    let of_yojson (sec:Yojson.Safe.t) =
       of_yojson_with_span Time.Span.of_sec sec
     let to_yojson (sec:t) = to_yojson sec
   end

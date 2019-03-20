@@ -58,7 +58,7 @@ module Response = struct
           )
         )
       )
-      | #Yojson.Safe.json as json ->
+      | #Yojson.Safe.t as json ->
         Result.Ok (None, json)
 
   end
@@ -66,7 +66,7 @@ module Response = struct
   type result_field =
     {result:Json_result.t} [@@deriving of_yojson, sexp]
 
-  type t = {result:Json_result.t; payload:Yojson.Safe.json}
+  type t = {result:Json_result.t; payload:Yojson.Safe.t}
 
 
   let parse json ok_of_yojson =

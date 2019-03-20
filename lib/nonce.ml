@@ -67,7 +67,7 @@ module Request = struct
     {request:string; nonce:int} [@@deriving sexp, yojson]
 
   type t =
-    {request:string; nonce:int; payload:Yojson.Safe.json option [@default None]}
+    {request:string; nonce:int; payload:Yojson.Safe.t option [@default None]}
 
   let make ~request ~nonce ?payload () =
     Pipe.read nonce >>= function
@@ -76,18 +76,18 @@ module Request = struct
         {request;nonce;payload}
     | `Eof -> assert false
 
-  let to_yojson {request;nonce;payload} : Yojson.Safe.json =
+  let to_yojson {request;nonce;payload} : Yojson.Safe.t =
     match request_nonce_to_yojson {request;nonce} with
     | `Assoc assoc as a ->
       (match Option.value ~default:`Null payload with
        | `Null -> a
        | `Assoc assoc' ->
          `Assoc (assoc @ assoc')
-       | #Yojson.Safe.json as unsupported_yojson ->
+       | #Yojson.Safe.t as unsupported_yojson ->
          failwithf "expected json association for request payload but got %S"
            (Yojson.Safe.to_string unsupported_yojson) ()
       )
-    | #Yojson.Safe.json as unsupported_yojson ->
+    | #Yojson.Safe.t as unsupported_yojson ->
       failwithf "expected json association for type request_nonce but got %S"
         (Yojson.Safe.to_string unsupported_yojson) ()
 

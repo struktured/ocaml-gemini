@@ -69,16 +69,16 @@ sig
     val of_string : string -> t
     val of_string_opt : string -> t option
      val split :
-      [< Yojson.Safe.json ] ->
-      (t option * [> Yojson.Safe.json ], string) result
+      [< Yojson.Safe.t ] ->
+      (t option * [> Yojson.Safe.t ], string) result
   end
   type result_field =
     { result : Json_result.t; } [@@deriving sexp, of_yojson]
   type t =
-    { result : Json_result.t; payload : Yojson.Safe.json; }
+    { result : Json_result.t; payload : Yojson.Safe.t; }
   val parse :
-    Yojson.Safe.json ->
-    ([> Yojson.Safe.json ] -> ('a, string) result) ->
+    Yojson.Safe.t ->
+    ([> Yojson.Safe.t ] -> ('a, string) result) ->
     [ `Error of Error.detail
     | `Json_parse_error of Error.json_error
     | `Ok of 'a

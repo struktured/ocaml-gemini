@@ -205,7 +205,7 @@ type response =
 
 
 let response_of_yojson :
-    Yojson.Safe.json -> ('a, string) Result.t = function
+    Yojson.Safe.t -> ('a, string) Result.t = function
     | `Assoc assoc as json ->
       (List.Assoc.find assoc ~equal:String.equal
          "type" |> function
@@ -235,11 +235,11 @@ let response_of_yojson :
            )
       )
 
-    | (`List l : Yojson.Safe.json) ->
+    | (`List l : Yojson.Safe.t) ->
       Result.(all (List.map l ~f:Order_event.of_yojson) |>
               map ~f:(fun x -> `Order_events x)
              )
-    | #Yojson.Safe.json as json ->
+    | #Yojson.Safe.t as json ->
       Result.failf "expected association type in json payload: %s"
         (Yojson.Safe.to_string json)
 

@@ -86,14 +86,14 @@ module Make(E:ENUM_STRING) : S with type t = E.t = struct
 
   let to_yojson t = `String (E.to_string t)
 
-  let of_yojson (json : Yojson.Safe.json) =
+  let of_yojson (json : Yojson.Safe.t) =
     match json with
     | `String s ->
       (match of_string_opt s with
       | Some t -> Result.return t
       | None -> error_message s |> Result.fail
       )
-   | #Yojson.Safe.json ->
+   | #Yojson.Safe.t ->
         Result.failf "expected json string but got %S"
           (Yojson.Safe.to_string json)
 

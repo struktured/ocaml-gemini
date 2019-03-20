@@ -196,7 +196,7 @@ end
 
 
   let of_yojson :
-    Yojson.Safe.json -> (t, string) Result.t = function
+    Yojson.Safe.t -> (t, string) Result.t = function
     | `Assoc assoc as json ->
       (List.Assoc.find assoc ~equal:String.equal
          "type" |> function
@@ -221,7 +221,7 @@ end
               Result.map ~f:(fun event -> `Auction_outcome event)
            )
       )
-    | #Yojson.Safe.json as json ->
+    | #Yojson.Safe.t as json ->
       Result.failf "expected association type in json payload: %s"
         (Yojson.Safe.to_string json)
 end
@@ -234,7 +234,7 @@ end
     ] [@@deriving sexp]
 
   let event_of_yojson :
-    Yojson.Safe.json -> (event, string) Result.t = function
+    Yojson.Safe.t -> (event, string) Result.t = function
     | `Assoc assoc as json ->
       (List.Assoc.find assoc ~equal:String.equal
          "type" |> function
@@ -262,7 +262,7 @@ end
               Result.map ~f:(fun event -> `Block_trade event)
            )
       )
-    | #Yojson.Safe.json as json ->
+    | #Yojson.Safe.t as json ->
       Result.failf "expected association type in json payload: %s"
         (Yojson.Safe.to_string json)
 
@@ -284,7 +284,7 @@ end
     } [@@deriving sexp]
 
   let response_of_yojson :
-    Yojson.Safe.json -> (response, string) Result.t = function
+    Yojson.Safe.t -> (response, string) Result.t = function
     | `Assoc assoc as json ->
       (
         (
@@ -322,7 +322,7 @@ end
                 ~f:(fun message -> {socket_sequence;message})
             )
       )
-    | #Yojson.Safe.json as json ->
+    | #Yojson.Safe.t as json ->
       Result.failf "response_of_yojson:expected association type \
                     in json payload: %s"
         (Yojson.Safe.to_string json)
