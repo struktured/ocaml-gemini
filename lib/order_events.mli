@@ -12,16 +12,6 @@ module Request = Nonce.Request
 (** The order events api has no uri arguments .*)
 type uri_args = [`None] [@@deriving sexp, enumerate]
 
-
-(** Represents order message types supported by the Gemini exchange *)
-module Message_type : sig
-  (* The support message types for order events -
-     either [`Update] or [`Heartbeat].
-  *)
-  type t = [`Update | `Heartbeat] [@@deriving sexp, enumerate]
-  include Json.ENUM_STRING with type t := t
-end
-
 (** Response type for heart beat messages. *)
 type heartbeat = {timestampms:Timestamp.Ms.t;
                   sequence:Int_number.t;

@@ -12,18 +12,6 @@ module T = struct
   let default_uri_args = None
   let encode_uri_args _ =
     failwith "uri path arguments not support for order events"
-
-  module Message_type = struct
-    module T = struct
-      type t = [`Update | `Heartbeat] [@@deriving sexp, enumerate]
-      let to_string = function
-        | `Update -> "update"
-        | `Heartbeat -> "heartbeat"
-    end
-    include T
-    include (Json.Make(T) : Json.S with type t := t)
-  end
-
   type heartbeat = {timestampms:Timestamp.Ms.t;
                     sequence:Int_number.t;
                     trace_id:string;
@@ -202,7 +190,6 @@ type response =
   | `Order_event of Order_event.t
   | `Order_events of Order_event.t list
   ] [@@deriving sexp]
-
 
 let response_of_yojson :
     Yojson.Safe.t -> ('a, string) Result.t = function

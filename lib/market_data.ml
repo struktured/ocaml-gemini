@@ -75,6 +75,25 @@ module T = struct
 
   type heartbeat = unit [@@deriving sexp, of_yojson]
 
+(*
+  let _with_common_headers (type t) ~event_id ~timestamp
+      (module T : Csvfields.Csv.Csvable with type t = t) =
+    let module TT = struct
+      include T
+      let csv_header = ["event_id";"timestamp"]@csv_header
+      let row_of_t t =
+        [
+          (Int64.to_string event_id);
+          (Timestamp.to_string timestamp)
+        ] @ (row_of_t t)
+
+      let csv_header_spec =
+        [(Leaf "event_id" : Csvfields.Csv.Spec.t);Leaf "timestamp"] @ csv_header_spec
+
+    end in
+    (module TT : Csvfields.Csv.Csvable with type t = t)
+*)
+
   module Reason = struct
     module T = struct
       type t =
@@ -90,30 +109,92 @@ module T = struct
   end
 
   module Change_event = struct
-     type t =
-       {price:Decimal_string.t;
-        side:Side.Bid_ask.t;
-        reason:Reason.t;
-        remaining:Decimal_string.t;
-        delta:Decimal_string.t
-    } [@@deriving sexp, of_yojson, fields, csv]
+    module T = struct
+      type t =
+        {price:Decimal_string.t;
+         side:Side.Bid_ask.t;
+         reason:Reason.t;
+         remaining:Decimal_string.t;
+         delta:Decimal_string.t
+        } [@@deriving sexp, of_yojson, fields, csv]
+    end
+
+    module Decorated = struct
+      type t =
+        {event_id:Int_number.t;
+         timestamp:Timestamp.t;
+         price:Decimal_string.t;
+         side:Side.Bid_ask.t;
+         reason:Reason.t;
+         remaining:Decimal_string.t;
+         delta:Decimal_string.t
+        } [@@deriving sexp, of_yojson, fields, csv]
+
+      let create ~event_id ~timestamp
+          ({ reason; side;price; remaining; delta }:T.t) =
+        {event_id;timestamp;side;reason;remaining;price;delta}
+
+    end
+
+    let to_decorated = Decorated.create
+
+    include T
   end
 
-
   module Trade_event = struct
-    type t =
-      {tid:Int_number.t;
-       price:Decimal_string.t;
-       amount:Decimal_string.t;
-       maker_side:Side.t [@key "makerSide"]
-      } [@@deriving of_yojson, sexp, fields, csv]
+    module T = struct
+      type t =
+        {tid:Int_number.t;
+         price:Decimal_string.t;
+         amount:Decimal_string.t;
+         maker_side:Side.t [@key "makerSide"]
+        } [@@deriving of_yojson, sexp, fields, csv]
+    end
+
+    module Decorated = struct
+      type t =
+        {
+         event_id:Int_number.t;
+         timestamp:Timestamp.t;
+         tid:Int_number.t;
+         price:Decimal_string.t;
+         amount:Decimal_string.t;
+         maker_side:Side.t [@key "makerSide"]
+        } [@@deriving of_yojson, sexp, fields, csv]
+
+       let create ~event_id ~timestamp
+           ({ tid; price; amount; maker_side }:T.t) =
+         {event_id;timestamp;tid;price;amount;maker_side}
+    end
+
+    let to_decorated = Decorated.create
+
+    include T
   end
 
  module Block_trade_event = struct
-   type t =
-     {price:Decimal_string.t;
-      amount:Decimal_string.t
-     } [@@deriving of_yojson, sexp, fields, csv]
+   module T = struct
+     type t =
+       {price:Decimal_string.t;
+        amount:Decimal_string.t
+       } [@@deriving of_yojson, sexp, fields, csv]
+   end
+
+   module Decorated = struct
+     type t =
+       {event_id:Int_number.t;
+        timestamp:Timestamp.t;
+        price:Decimal_string.t;
+        amount:Decimal_string.t
+       } [@@deriving of_yojson, sexp, fields, csv]
+
+     let create ~event_id ~timestamp
+           ({price; amount}:T.t) =
+         {event_id;timestamp;price;amount}
+    end
+
+   let to_decorated = Decorated.create
+   include T
  end
 
  module Auction_open_event = struct
@@ -267,15 +348,17 @@ end
         (Yojson.Safe.to_string json)
 
 
-  type update =
+  module Update = struct
+    type t =
     { event_id : Int_number.t [@key "eventId"];
-      events : event array;
+      events : event array [@default [||]];
       timestamp : Timestamp.Sec.t option [@default None];
       timestampms : Timestamp.Ms.t option [@default None]
     } [@@deriving sexp, of_yojson]
+  end
 
   type message =
-    [`Heartbeat of heartbeat | `Update of update] [@@deriving sexp]
+    [`Heartbeat of heartbeat | `Update of Update.t] [@@deriving sexp]
 
   type response =
     {
@@ -308,14 +391,15 @@ end
                    ~equal:String.equal assoc "type" |> fun assoc ->
                  List.Assoc.remove
                    ~equal:String.equal assoc "socket_sequence"
-                ) in
+                )
+            in
             (
               (match message_type with
                | `Heartbeat ->
                  heartbeat_of_yojson json' |>
                  Result.map ~f:(fun event -> `Heartbeat event)
                | `Update ->
-                 update_of_yojson json' |>
+                 Update.of_yojson json' |>
                  Result.map ~f:(fun event -> `Update event)
               )
               |> Result.map
@@ -329,32 +413,37 @@ end
 
   module Csv_of_event = Ws.Csv_of_event(Event_type)
 
-  let events_of_response (response:response) =
+  let events_of_response
+    (response:response) =
     let csv_of_events = Csv_of_event.empty in
     match response.message with
     | `Heartbeat _ -> csv_of_events
-    | `Update (update:update) ->
+    | `Update (update : Update.t) ->
+      let event_id = update.event_id in
+      let timestamp =
+        Option.(first_some update.timestamp
+                   update.timestamp |> value ~default:(Time.now())
+               ) in
       Array.fold ~init:csv_of_events update.events
         ~f:
           (fun csv_of_events (event:event) ->
              (match event with
               | `Change change ->
                 Csv_of_event.add' csv_of_events `Change
-                  (module Change_event)
-                  [change]
+                  (module Change_event.Decorated)
+                  [Change_event.to_decorated ~event_id ~timestamp change]
               | `Trade trade ->
                 Csv_of_event.add' csv_of_events `Trade
-                  (module Trade_event)
-                  [trade]
+                  (module Trade_event.Decorated)
+                  [Trade_event.to_decorated ~event_id ~timestamp trade]
               | `Auction _auction -> csv_of_events
               | `Block_trade block_trade ->
                 Csv_of_event.add' csv_of_events `Block_trade
-                  (module Block_trade_event)
-                  [block_trade]
+                  (module Block_trade_event.Decorated)
+                  [Block_trade_event.to_decorated
+                     ~event_id ~timestamp block_trade]
              )
           )
 end
 include T
 include Ws.Make_no_request(T)
-
-

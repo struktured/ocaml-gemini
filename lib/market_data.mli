@@ -178,17 +178,18 @@ type event =
 
 
 (** The type of a market data update message. *)
-type update = {
-  event_id : Int_number.t;
-  events : event array;
-  timestamp : Timestamp.Sec.t option;
-  timestampms : Timestamp.Ms.t option;
-} [@@deriving sexp, of_yojson]
-
+module Update : sig
+  type t  = {
+    event_id : Int_number.t;
+    events : event array;
+    timestamp : Timestamp.Sec.t option;
+    timestampms : Timestamp.Ms.t option;
+  } [@@deriving sexp, of_yojson]
+end
 
 (** The type of a market data message- a heartbeat or update. *)
 type message =
-  [ `Heartbeat of heartbeat | `Update of update ]
+  [ `Heartbeat of heartbeat | `Update of Update.t ]
 [@@deriving sexp]
 
 
