@@ -154,7 +154,6 @@ module T = struct
     module Decorated = struct
       type t =
         {
-         event_id:Int_number.t;
          timestamp:Timestamp.t;
          tid:Int_number.t;
          price:Decimal_string.t;
@@ -164,7 +163,11 @@ module T = struct
 
        let create ~event_id ~timestamp
            ({ tid; price; amount; maker_side }:T.t) =
-         {event_id;timestamp;tid;price;amount;maker_side}
+         match Int64.equal event_id tid with
+         | true ->
+           {timestamp;tid;price;amount;maker_side}
+         | false -> failwith
+             "logical error: event_id and trade id (tid) should be equal"
     end
 
     let to_decorated = Decorated.create
