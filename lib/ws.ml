@@ -271,7 +271,6 @@ let client (module Cfg : Cfg.S)
       |> Option.value ~default:(Cohttp.Header.init ()) in
     let r, _w = Websocket_async.client_ez
         ~extra_headers
-        ~log:Lazy.(force Log.Global.log)
         ~heartbeat:Time_ns.Span.(of_int_sec 5)
         uri r w
     in
@@ -336,7 +335,7 @@ let handle_client addr reader writer =
       else loop ()
   in
   Deferred.any [
-    begin Websocket_async.server ~log:Lazy.(force Log.Global.log)
+    begin Websocket_async.server
         ~check_request ~app_to_ws ~ws_to_app ~reader ~writer () >>= function
       | Error err when Error.to_exn err = Exit -> Deferred.unit
       | Error err -> Error.raise err
