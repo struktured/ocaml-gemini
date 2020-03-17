@@ -164,7 +164,7 @@ struct
      `Service_unavailable body
     | (code : Cohttp.Code.status_code) ->
       Cohttp_async.Body.to_string body >>| fun body ->
-      failwiths (sprintf "unexpected status code (body=%S)" body)
+      failwiths ~here:[%here] (sprintf "unexpected status code (body=%S)" body)
         code Cohttp.Code.sexp_of_status_code
 end
 
@@ -196,6 +196,7 @@ struct
                ); Log.Global.flushed ()
            | #Error.post as post_error ->
              failwiths
+               ~here:[%here]
                (sprintf
                   "post for operation %S failed"
                   (Path.to_string Operation.path)
@@ -230,6 +231,7 @@ struct
                ); Log.Global.flushed ()
            | #Error.post as post_error ->
              failwiths
+               ~here:[%here]
                (sprintf
                   "post for operation %S failed"
                   (Path.to_string Operation.path)
