@@ -43,7 +43,7 @@ sig
   (** Market data event types. One of  [`Trade], [`Change], [`Auction],
       or [`Block_trade].
   *)
-  type t = [`Trade | `Change | `Auction | `Block_trade] [@@deriving sexp]
+  type t = [`Trade | `Change | `Auction | `Auction_open | `Block_trade] [@@deriving sexp]
   include Json.S with type t := t
   include Comparable with type t := t
 end
@@ -170,6 +170,7 @@ end
 (** The type of event, unified over auction, change, and trade events. *)
 type event =
   [ `Auction of Auction_event.t
+  | `Auction_open of Auction_open_event.t
   | `Change of Change_event.t
   | `Trade of Trade_event.t
   | `Block_trade of Block_trade_event.t

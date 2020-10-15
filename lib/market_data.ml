@@ -58,13 +58,14 @@ module T = struct
 
   module Event_type = struct
     module T = struct
-      type t = [`Trade | `Change | `Auction | `Block_trade]
+      type t = [`Trade | `Change | `Auction | `Auction_open | `Block_trade]
       [@@deriving sexp, enumerate, compare]
 
       let to_string = function
         | `Trade -> "trade"
         | `Change -> "change"
         | `Auction -> "auction"
+        | `Auction_open -> "auction_open"
         | `Block_trade -> "block_trade"
 
     end
@@ -314,6 +315,7 @@ end
     [ `Change of Change_event.t
     | `Trade of Trade_event.t
     | `Auction of Auction_event.t
+    | `Auction_open of Auction_open_event.t
     | `Block_trade of Block_trade_event.t
     ] [@@deriving sexp]
 
@@ -341,6 +343,9 @@ end
             | `Auction ->
               Auction_event.of_yojson json' |>
               Result.map ~f:(fun event -> `Auction event)
+            | `Auction_open ->
+              Auction_open_event.of_yojson json' |>
+              Result.map ~f:(fun event -> `Auction_open event)
             | `Block_trade ->
               Block_trade_event.of_yojson json' |>
               Result.map ~f:(fun event -> `Block_trade event)
@@ -440,6 +445,7 @@ end
                   (module Trade_event.Decorated)
                   [Trade_event.to_decorated ~event_id ~timestamp trade]
               | `Auction _auction -> csv_of_events
+              | `Auction_open _auction -> csv_of_events
               | `Block_trade block_trade ->
                 Csv_of_event.add' csv_of_events `Block_trade
                   (module Block_trade_event.Decorated)
