@@ -98,7 +98,7 @@ struct
             None
           )
       with
-      | _error ->
+      | _error -> (* This looks confusing, simplify or document *)
         Log.Global.debug "ws: getting csv header";
         csv_header t event_type in
     Out_channel.with_file
@@ -164,7 +164,7 @@ module type CHANNEL = sig
   (** Defaut uri arguments. Optional for some channels. *)
   val default_uri_args : uri_args option
 
-  (** Repsone type of the channel. Must have sexp converters
+  (** Respone type of the channel. Must have sexp converters
       and a yojson parser *)
   type response [@@deriving sexp, of_yojson]
 
@@ -174,6 +174,7 @@ module type CHANNEL = sig
 
   module Csv_of_event :
     CSV_OF_EVENTS with module Event_type = Event_type
+
   (** Given a response value produce csvable events
       modularized by event type. *)
   val events_of_response :
