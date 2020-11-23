@@ -3,18 +3,26 @@ module Side =
 struct
   module Bid_ask = struct
     module T = struct
-      type t = [`Bid | `Ask] [@@deriving sexp, enumerate]
+      type t = [`Bid | `Ask] [@@deriving sexp, enumerate, compare]
       let to_string : [<t] -> string = function
         | `Bid -> "bid"
         | `Ask -> "ask"
     end
-    include T
-    include (Json.Make(T) : Json.S with type t := t)
+
+   include T
+   let of_order_side (side : Side.t) : t =
+     match side with `Buy -> `Bid | `Sell -> `Ask
+
+   let to_order_side (t:t) : Side.t =
+     match t with `Bid -> `Buy | `Ask -> `Sell
+
+
+   include (Json.Make(T) : Json.S with type t := t)
   end
 
   module Auction = struct
     module T = struct
-      type t = [`Auction] [@@deriving sexp, enumerate]
+      type t = [`Auction] [@@deriving sexp, enumerate, compare]
       let to_string = function
           `Auction -> "auction"
     end
@@ -23,7 +31,7 @@ struct
   end
 
   module T = struct
-    type t = [Bid_ask.t | Auction.t] [@@deriving sexp, enumerate]
+    type t = [Bid_ask.t | Auction.t] [@@deriving sexp, enumerate, compare]
     let to_string : [<t] -> string = function
       | #Bid_ask.t as bid_ask -> Bid_ask.to_string bid_ask
       | #Auction.t as auction -> Auction.to_string auction
@@ -75,25 +83,6 @@ module T = struct
   end
 
   type heartbeat = unit [@@deriving sexp, of_yojson]
-
-(*
-  let _with_common_headers (type t) ~event_id ~timestamp
-      (module T : Csvfields.Csv.Csvable with type t = t) =
-    let module TT = struct
-      include T
-      let csv_header = ["event_id";"timestamp"]@csv_header
-      let row_of_t t =
-        [
-          (Int64.to_string event_id);
-          (Timestamp.to_string timestamp)
-        ] @ (row_of_t t)
-
-      let csv_header_spec =
-        [(Leaf "event_id" : Csvfields.Csv.Spec.t);Leaf "timestamp"] @ csv_header_spec
-
-    end in
-    (module TT : Csvfields.Csv.Csvable with type t = t)
-*)
 
   module Reason = struct
     module T = struct

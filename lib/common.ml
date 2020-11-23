@@ -17,17 +17,22 @@ module Int_string = struct
              Csvfields.Csv.Csvable with type t := t
           )
 end
+
 module Decimal_number = struct
-  type t = float [@encoding `number] [@@deriving sexp, yojson]
+  type t = float [@encoding `number] [@@deriving sexp, yojson, compare]
+  let of_string = float_of_string
 end
 
 module Decimal_string = struct
-  type t = string [@@deriving sexp, yojson]
+  type t = string [@@deriving sexp, yojson, compare]
   include (Csvfields.Csv.Atom (String) :
              Csvfields.Csv.Csvable with type t := t
           )
   let of_string t = t
   let to_string t = t
+
+  let to_decimal_number = Decimal_number.of_string
+
 end
 (** Represents an order side. *)
 module Side =
@@ -35,7 +40,7 @@ struct
   module T = struct
 
     (** The type of an order side - [`Buy] or [`Sell]. *)
-    type t = [`Buy | `Sell] [@@deriving sexp, enumerate]
+    type t = [`Buy | `Sell] [@@deriving sexp, enumerate, compare]
 
     let to_string = function
       | `Buy -> "buy"
@@ -61,7 +66,7 @@ module Symbol = struct
       | `Ltcusd | `Ltcbtc | `Ltceth | `Ltcbch
       | `Bchusd | `Bchbtc | `Bcheth
       ]
-    [@@deriving sexp, enumerate]
+    [@@deriving sexp, enumerate, compare]
 
     let to_string : [<t] -> string = function
       | `Btcusd -> "btcusd"
@@ -92,7 +97,7 @@ module Exchange = struct
 
   module T = struct
     (** The exchange type - gemini only, currently. *)
-    type t = [`Gemini] [@@deriving sexp, enumerate]
+    type t = [`Gemini] [@@deriving sexp, enumerate, compare]
     let to_string `Gemini = "gemini"
   end
   include T
@@ -107,7 +112,7 @@ module Timestamp = struct
   module T0 = struct
     (** A timestamp is just a core time instance that
         was converted from some raw json date. *)
-    type t = Time.t [@@deriving sexp]
+    type t = Time.t [@@deriving sexp, compare]
 
     let to_string t =
       Time.to_span_since_epoch t |>
@@ -177,7 +182,7 @@ module Currency = struct
         currently by Gemini.
     *)
     type t = [`Eth | `Btc | `Usd | `Zec | `Bch | `Ltc]
-    [@@deriving sexp, enumerate]
+    [@@deriving sexp, enumerate, compare]
     let to_string = function
       | `Eth -> "eth"
       | `Btc -> "btc"
@@ -198,7 +203,7 @@ module Order_type = struct
 
     (** The type of order types- only [`Exchange_limit] is
         currently supported. *)
-    type t = [`Exchange_limit] [@@deriving sexp, enumerate]
+    type t = [`Exchange_limit] [@@deriving sexp, enumerate, compare]
     let to_string = function
       | `Exchange_limit -> "exchange limit"
   end

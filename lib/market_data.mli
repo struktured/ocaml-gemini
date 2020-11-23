@@ -10,19 +10,23 @@ sig
   (** Represents a bid or ask side. *)
   module Bid_ask :
   sig
-    type t = [ `Ask | `Bid ] [@@deriving sexp]
+    type t = [ `Ask | `Bid ] [@@deriving sexp, compare]
     include Json.S with type t := t
+
+    val of_order_side : Side.t -> t
+    val to_order_side : t -> Side.t 
   end
 
   (** Represents an auction style side. *)
   module Auction :
   sig
-    type t = [ `Auction ] [@@deriving sexp]
+    type t = [ `Auction ] [@@deriving sexp, compare]
     include Json.S with type t := t
   end
 
   (** A most general type of side- one of [`Bid], [`Ask], or [`Auction]. *)
-  type t = [ Bid_ask.t | Auction.t] [@@deriving sexp]
+  type t = [ Bid_ask.t | Auction.t] [@@deriving sexp, compare]
+
 
   include Json.S with type t := t
 end
