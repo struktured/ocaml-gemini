@@ -1,22 +1,59 @@
 open Common
+open V1
+
 module Side = Market_data.Side
 
 module Change_event = Market_data.Change_event
 
+module V1_order = Order
+type request = Order.New.request [@@deriving sexp]
 
 
 module Order = struct
-  type t = { currency: Currency.t;
+  type t =
+           { client_order_id:string option;
+             symbol: Symbol.t;
              side: Side.Bid_ask.t;
              price: Decimal_number.t;
-             volume: Decimal_number.t
-           } [@@deriving sexp, compare]
+             volume: Decimal_number.t;
+             options: Order_execution_option.t list;
+             type_: Order_type.t
+           } [@@deriving sexp, compare, make]  
 
-end
+  let zero ?client_order_id ?(options=[(`Immediate_or_cancel :> Order_execution_option.t)]) ?(type_=`Exchange_limit) ~symbol ~side () =
+    make ?client_order_id ~symbol ~side ~volume:0.
+      ~options ~type_ ~price:0. ()
 
+  let of_request ({ client_order_id; symbol; amount; price; side; type_; options }:request) : t = 
+        {
+          client_order_id = Some client_order_id;
+          symbol;
+          side = Side.Bid_ask.of_order_side side;
+          price = Decimal_string.to_decimal_number price;
+          volume = Decimal_string.to_decimal_number amount;
+          options;
+          type_
+        }
+
+  let to_request ?client_order_id ({ client_order_id=orig_client_order_id; symbol; volume; 
+                                     price; side; type_; options }:t) : request option =
+    Option.(first_some client_order_id orig_client_order_id |> map ~f: 
+      (fun client_order_id ->
+        ({
+          client_order_id;
+          symbol;
+          side = Side.Bid_ask.to_order_side side;
+          price = Decimal_number.to_decimal_string price;
+          amount = Decimal_number.to_decimal_string volume;
+          options;
+          type_
+        }:request)
+      ))
+
+end 
 
 module Side_price = struct
-  type t = { side: Side.Bid_ask.t; price:Decimal_number.t } [@@deriving sexp, compare]
+  type t = { side: Side.Bid_ask.t; price:Decimal_number.t } [@@deriving sexp, compare, make]
 end
 
 
@@ -24,9 +61,9 @@ module By_side_price = Map.Make(Side_price)
 
 
 module Order_book = struct
-  type t = { book:Order.t By_side_price.t; currency: Currency.t } [@@deriving sexp, compare]
+  type t = { book:Order.t By_side_price.t; symbol: Symbol.t } [@@deriving sexp, compare, make]
 
-  let empty currency : t = { book=By_side_price.empty; currency}
+  let empty symbol : t = { book=By_side_price.empty; symbol}
 
   let update (t:t) (change_event:Change_event.t) =
    let side = change_event.side in
@@ -41,16 +78,18 @@ module Order_book = struct
         | Some order ->
           {order with price;volume}
         | None -> {
+            client_order_id=None;
             price;
-            volume;
-            currency=t.currency;
-            side
+            volume; symbol=t.symbol;
+            side;
+            options = [];
+            type_=`Exchange_limit
           }
       ) in
       {t with book}
 
-  let at_volume (t:t) ~(volume:Decimal_number.t) ~(side:Side.Bid_ask.t) =
-    let avg_order : Order.t = {currency=t.currency;side; volume=0.;price=0.} in
+  let at_volume ?(side=`Ask) ~(volume:Decimal_number.t) t =
+    let avg_order = Order.zero ~symbol:t.symbol ~side () in
     By_side_price.fold ~init:([], avg_order) t.book ~f:(fun ~key:_ ~data:order (orders, avg_order) ->
         match avg_order.volume >=. volume with
         | true -> (orders, avg_order)
@@ -68,7 +107,7 @@ module Order_book = struct
            )
 
   let at_price (t:t) ~(price:Decimal_number.t) ~(side:Side.Bid_ask.t) =
-    let avg_order : Order.t = {currency=t.currency;side; volume=0.;price=0.} in
+    let avg_order = Order.zero ~symbol:t.symbol ~side () in
     By_side_price.fold ~init:([], avg_order) t.book ~f:(fun ~key:_ ~data:order (orders, avg_order) ->
       match side <> order.side && (price <=. order.price) with
       | true ->
@@ -78,10 +117,6 @@ module Order_book = struct
       ) |> fun (orders, (avg_order:Order.t)) ->
         (orders, {avg_order with price = avg_order.price /. avg_order.volume})
 
-  let submit_order (_order:Order.t) (module Cfg:Cfg.S) = failwith "nyi"
- (*    let request : Gemini.V1.Order.New.request = { !
-    Gemini.V1.Order.New.post (module Cfg) *)
-
   let replace (t:t) (order:Order.t) = 
     {t with book = By_side_price.update t.book {side=order.side; price=order.price} ~f:(function | None | Some _ -> order)}
 
@@ -89,16 +124,16 @@ end
 
 
 module Order_books = struct 
-  module Map = Map.Make(Currency)
+  module Map = Map.Make(Symbol)
 
   type t = Order_book.t Map.t [@@deriving sexp, compare]
 
   let empty = Map.empty
 
   let set (t:t) (order:Order.t) = 
-    Map.update t order.currency ~f:
+    Map.update t order.symbol ~f:
       (fun order_book -> 
-        let order_book = Option.value order_book ~default:(Order_book.empty order.currency) in
+        let order_book = Option.value order_book ~default:(Order_book.empty order.symbol) in
         Order_book.replace order_book order
       )
 
@@ -109,15 +144,24 @@ module Order_books = struct
         Order_book.update order_book change_event
       )
 
-  let order_book (t:t) (currency:Currency.t) = Map.find t currency
+  let order_book (t:t) (symbol:Symbol.t) = Map.find t symbol
 end
 
 module State = struct
-  type t = { private_book: Order_books.t ; public_book: Order_books.t } [@@deriving sexp, compare]
+  type t = { private_book: Order_books.t ; 
+             public_book: Order_books.t } [@@deriving sexp, compare]
 
 
   let empty = { private_book= Order_books.empty; 
                 public_book= Order_books.empty 
               }
 end
+
+
+let submit_order (module Cfg:Cfg.S) (nonce) (_order:Order.t) =
+  let request : V1_order.New.request = failwith "nyi" in
+  V1_order.New.post (module Cfg) nonce request >>| function
+  | `Ok _response -> failwith "nbyi"
+  | #Rest.Error.post as e -> e
+
 

@@ -51,7 +51,7 @@ module V1 : sig
 
       (** The type of an order execution rule. *)
       type t =
-        [ `Auction_only | `Immediate_or_cancel | `Maker_or_cancel ]
+        [ `Auction_only | `Immediate_or_cancel | `Maker_or_cancel ] [@@deriving sexp, compare]
       include Json.S with type t := t
     end
 

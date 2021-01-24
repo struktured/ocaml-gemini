@@ -21,6 +21,8 @@ end
 module Decimal_number = struct
   type t = float [@encoding `number] [@@deriving sexp, yojson, compare]
   let of_string = float_of_string
+  let to_string = string_of_float
+  let to_decimal_string = to_string
 end
 
 module Decimal_string = struct
@@ -45,6 +47,9 @@ struct
     let to_string = function
       | `Buy -> "buy"
       | `Sell -> "sell"
+
+    let of_bid_ask_side : [`Bid | `Ask] -> t = function `Bid -> `Buy | `Ask -> `Sell
+    let to_bid_ask_side = function `Buy -> `Bid | `Sell -> `Ask
   end
   include T
   include (Json.Make(T) : Json.S with type t := t)

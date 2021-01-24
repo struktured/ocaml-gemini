@@ -3,7 +3,7 @@ type reader = int Pipe.Reader.t
 module type S = sig
   type t [@@deriving sexp]
 
-  val pipe : init:t -> unit -> int Pipe.Reader.t Deferred.t
+  val pipe : init:t -> unit -> reader Deferred.t
 end
 
 module Counter : S with type t = int = struct
