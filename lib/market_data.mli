@@ -10,7 +10,7 @@ sig
   (** Represents a bid or ask side. *)
   module Bid_ask :
   sig
-    type t = [ `Ask | `Bid ] [@@deriving sexp, compare]
+    type t = [ `Ask | `Bid ] [@@deriving sexp, compare, eq]
     include Json.S with type t := t
 
     val of_order_side : Side.t -> t
@@ -20,12 +20,12 @@ sig
   (** Represents an auction style side. *)
   module Auction :
   sig
-    type t = [ `Auction ] [@@deriving sexp, compare]
+    type t = [ `Auction ] [@@deriving sexp, compare, eq]
     include Json.S with type t := t
   end
 
   (** A most general type of side- one of [`Bid], [`Ask], or [`Auction]. *)
-  type t = [ Bid_ask.t | Auction.t] [@@deriving sexp, compare]
+  type t = [ Bid_ask.t | Auction.t] [@@deriving sexp, compare, eq]
 
 
   include Json.S with type t := t
@@ -62,7 +62,7 @@ sig
   (** Reasons a market data event occured *)
   type t =
     [`Place | `Trade | `Cancel | `Initial]
-  [@@deriving sexp]
+  [@@deriving sexp, eq]
   include Json.S with type t := t
 end
 
@@ -212,7 +212,7 @@ include Ws.CHANNEL
 
 val client :
   (module Cfg.S) ->
-  ?query:Sexp.t sexp_list ->
+  ?query:Sexp.t list ->
   ?uri_args:uri_args -> unit ->
   response Pipe.Reader.t Deferred.t
 

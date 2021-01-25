@@ -33,8 +33,8 @@ module Optional = struct
       type t = elt option [@@deriving sexp, yojson]
       let to_string t =
         Option.value_map ~default:C.null t ~f:C.to_string
-      let of_string s =
-        if C.null = s then None else Some (C.of_string s)
+      let of_string (s:string) =
+        match String.equal C.null s with true -> None | false -> Some (C.of_string s)
     end
     include T
     include (Csvfields.Csv.Atom(T) : Csvfields.Csv.Csvable with type t := t)

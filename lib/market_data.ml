@@ -3,7 +3,7 @@ module Side =
 struct
   module Bid_ask = struct
     module T = struct
-      type t = [`Bid | `Ask] [@@deriving sexp, enumerate, compare]
+      type t = [`Bid | `Ask] [@@deriving sexp, enumerate, compare, eq]
       let to_string : [<t] -> string = function
         | `Bid -> "bid"
         | `Ask -> "ask"
@@ -22,7 +22,7 @@ struct
 
   module Auction = struct
     module T = struct
-      type t = [`Auction] [@@deriving sexp, enumerate, compare]
+      type t = [`Auction] [@@deriving sexp, enumerate, compare, eq]
       let to_string = function
           `Auction -> "auction"
     end
@@ -31,7 +31,7 @@ struct
   end
 
   module T = struct
-    type t = [Bid_ask.t | Auction.t] [@@deriving sexp, enumerate, compare]
+    type t = [Bid_ask.t | Auction.t] [@@deriving sexp, enumerate, compare, eq]
     let to_string : [<t] -> string = function
       | #Bid_ask.t as bid_ask -> Bid_ask.to_string bid_ask
       | #Auction.t as auction -> Auction.to_string auction
@@ -87,7 +87,7 @@ module T = struct
   module Reason = struct
     module T = struct
       type t =
-        [`Place | `Trade | `Cancel | `Initial] [@@deriving sexp, enumerate]
+        [`Place | `Trade | `Cancel | `Initial] [@@deriving sexp, enumerate, eq]
       let to_string = function
         | `Place -> "place"
         | `Trade -> "trade"

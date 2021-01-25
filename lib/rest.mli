@@ -65,7 +65,7 @@ sig
   sig
     type t = [ `Error | `Ok ] [@@derivin sexp, yojson, enumerate]
     val to_string : t -> string
-    val dict : (string * t) sexp_list
+    val dict : (string * t) list [@@deriving sexp]
     val of_string : string -> t
     val of_string_opt : string -> t option
      val split :

@@ -6,6 +6,7 @@
   *)
 module Result = struct
   include Result
+
   (** Unify results into tuple [('a , 'b)] if both are ok,
       otherwise produce one of the errors .
   *)
@@ -29,26 +30,27 @@ module type S = sig
   val of_string : string -> t
   val to_string : t -> string
   val is_csv_atom : bool
-  val rev_csv_header' : string sexp_list -> 'a -> 'b -> string sexp_list
+  val rev_csv_header' : string list -> 'a -> 'b -> string list
   val rev_csv_header_spec' :
-    Csvfields.Csv.Spec.t sexp_list ->
-    'a -> 'b -> Csvfields.Csv.Spec.t sexp_list
-  val t_of_row' : 'a -> string sexp_list -> (unit -> t) * string sexp_list
+    Csvfields.Csv.Spec.t list ->
+    'a -> 'b -> Csvfields.Csv.Spec.t list
+  val t_of_row' : 'a -> string list -> (unit -> t) * string list
   val write_row_of_t' :
     is_first:bool ->
     is_last:bool -> writer:(string -> unit) -> 'a -> 'b -> t -> unit
-  val csv_header : string sexp_list
-  val csv_header_spec : Csvfields.Csv.Spec.t sexp_list
-  val t_of_row : string sexp_list -> t
-  val row_of_t : t -> string sexp_list
-  val csv_load : ?separator:char -> string -> t sexp_list
-  val csv_load_in : ?separator:char -> In_channel.t -> t sexp_list
+  val csv_header : string list
+  val csv_header_spec : Csvfields.Csv.Spec.t list
+  val t_of_row : string list -> t
+  val row_of_t : t -> string list
+  val csv_load : ?separator:char -> string -> t list
+  val csv_load_in : ?separator:char -> In_channel.t -> t list
   val csv_save_fn :
-    ?separator:char -> (string -> unit) -> t sexp_list -> unit
+    ?separator:char -> (string -> unit) -> t list -> unit
   val csv_save_out :
-    ?separator:char -> Out_channel.t -> t sexp_list -> unit
-  val csv_save : ?separator:char -> string -> t sexp_list -> unit
+    ?separator:char -> Out_channel.t -> t list -> unit
+  val csv_save : ?separator:char -> string -> t list -> unit
   end
+
 (** An enumeration encodable as a json string. *)
 module type ENUM_STRING = sig
   type t [@@deriving enumerate]
