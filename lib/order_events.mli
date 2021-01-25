@@ -133,6 +133,7 @@ type t =
    event_type_filter:Order_event_type.t list [@key "eventTypeFilter"]
   } [@@deriving sexp, yojson, fields, csv]
 end
+
 (** The response type for any order message. *)
 type response =
   [ `Subscription_ack of Subscription_ack.t

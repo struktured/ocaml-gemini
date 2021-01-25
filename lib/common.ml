@@ -36,6 +36,7 @@ module Decimal_string = struct
   let to_decimal_number = Decimal_number.of_string
 
 end
+
 (** Represents an order side. *)
 module Side =
 struct
