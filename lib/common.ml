@@ -180,7 +180,7 @@ module Currency = struct
     (** An enumerated set of all supported currencies supported
         currently by Gemini.
     *)
-    type t = [`Eth | `Btc | `Usd | `Zec | `Bch | `Ltc | `Luna | `Xtz]
+    type t = [`Eth | `Btc | `Usd | `Zec | `Bch | `Ltc | `Luna | `Xtz | `Ust]
     [@@deriving sexp, enumerate]
     let to_string = function
       | `Eth -> "eth"
@@ -191,6 +191,7 @@ module Currency = struct
       | `Ltc -> "ltc"
       | `Luna -> "luna"
       | `Xtz -> "xtz"
+      | `Ust -> "ust"
   end
   include T
   include (Json.Make(T) : Json.S with type t := t)
