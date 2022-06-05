@@ -208,7 +208,7 @@ include Ws.CHANNEL
 
 val client :
   (module Cfg.S) ->
-  ?query:Sexp.t sexp_list ->
+  ?query:Sexp.t list ->
   ?uri_args:uri_args -> unit ->
   response Pipe.Reader.t Deferred.t
 
