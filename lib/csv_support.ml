@@ -34,7 +34,7 @@ module Optional = struct
       let to_string t =
         Option.value_map ~default:C.null t ~f:C.to_string
       let of_string s =
-        if C.null = s then None else Some (C.of_string s)
+        if String.equal C.null s then None else Some (C.of_string s)
     end
     include T
     include (Csvfields.Csv.Atom(T) : Csvfields.Csv.Csvable with type t := t)

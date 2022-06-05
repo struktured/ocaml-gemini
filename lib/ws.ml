@@ -235,7 +235,7 @@ let client (module Cfg : Cfg.S)
       Uri.(scheme uri) in
   let tcp_fun s r w =
     Socket.(setopt s Opt.nodelay true);
-    (if scheme = "https" || scheme = "wss" then
+    (if String.(equal scheme "https" || equal scheme "wss") then
        (Unix.Inet_addr.of_string_or_getbyname host >>|
         Ipaddr_unix.of_inet_addr
        ) >>= fun addr ->
@@ -297,7 +297,8 @@ let handle_client addr reader writer =
   let check_request req =
     let req_str = Format.asprintf "%a" Cohttp.Request.pp_hum req in
     Log.Global.info "Incoming connnection request: %s" req_str ;
-    Deferred.return (Cohttp.Request.(uri req |> Uri.path) = "/ws")
+    let path = Cohttp.Request.uri req |> Uri.path in
+    Deferred.return (String.equal path "/ws")
   in
   let rec loop () =
     Pipe.read receiver_read >>= function
@@ -338,8 +339,11 @@ let handle_client addr reader writer =
   Deferred.any [
     begin Websocket_async.server
         ~check_request ~app_to_ws ~ws_to_app ~reader ~writer () >>= function
-      | Error err when Error.to_exn err = Exit -> Deferred.unit
-      | Error err -> Error.raise err
+      | Error err ->
+         (match Error.to_exn err with 
+          | Exit -> Deferred.unit
+          | (_:Exn.t) -> Error.raise err
+         )
       | Ok () -> Deferred.unit
     end ;
     loop () ;
