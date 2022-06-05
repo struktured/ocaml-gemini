@@ -267,6 +267,7 @@ module V1 : sig
         ] Deferred.t
       val command : string * Command.t
     end
+  
   (** Gets all trade volume executed by on the
       Gemini trading exchange over the REST api. *)
   module Tradevolume :
@@ -276,7 +277,7 @@ module V1 : sig
           one particular symbol on the Gemini trading exchange.
       *)
       type volume = {
-        account_id : Int_number.t;
+        account_id : Int_number.t option;
         symbol : Symbol.t;
         base_currency : Currency.t;
         notional_currency : Currency.t;

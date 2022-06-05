@@ -29,6 +29,7 @@ module Decimal_string = struct
   let of_string t = t
   let to_string t = t
 end
+
 (** Represents an order side. *)
 module Side =
 struct
@@ -60,6 +61,7 @@ module Symbol = struct
       | `Zecusd | `Zecbtc | `Zeceth | `Zecbch | `Zecltc
       | `Ltcusd | `Ltcbtc | `Ltceth | `Ltcbch
       | `Bchusd | `Bchbtc | `Bcheth
+      | `Lunausd | `Xtzusd
       ]
     [@@deriving sexp, enumerate]
 
@@ -79,6 +81,8 @@ module Symbol = struct
       | `Ltcbtc -> "ltcbtc"
       | `Ltceth -> "ltceth"
       | `Ltcbch -> "ltcbch"
+      | `Lunausd -> "lunausd"
+      | `Xtzusd -> "xtzusd"
 
 
   end
@@ -176,7 +180,7 @@ module Currency = struct
     (** An enumerated set of all supported currencies supported
         currently by Gemini.
     *)
-    type t = [`Eth | `Btc | `Usd | `Zec | `Bch | `Ltc]
+    type t = [`Eth | `Btc | `Usd | `Zec | `Bch | `Ltc | `Luna | `Xtz]
     [@@deriving sexp, enumerate]
     let to_string = function
       | `Eth -> "eth"
@@ -185,6 +189,8 @@ module Currency = struct
       | `Zec -> "zec"
       | `Bch -> "bch"
       | `Ltc -> "ltc"
+      | `Luna -> "luna"
+      | `Xtz -> "xtz"
   end
   include T
   include (Json.Make(T) : Json.S with type t := t)
