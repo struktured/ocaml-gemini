@@ -226,8 +226,8 @@ module V1 = struct
 
   module Tradevolume = struct
 
-    type volume =
-      {account_id:Int_number.t;
+    type volume = {
+       account_id:(Int_number.t option [@default None]);
        symbol:Symbol.t;
        base_currency:Currency.t;
        notional_currency:Currency.t;
