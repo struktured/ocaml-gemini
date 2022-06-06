@@ -239,6 +239,8 @@ module V1 : sig
         order_id : Int_string.t;
         client_order_id : string option;
         is_auction_fill : bool;
+        is_clearing_fill: bool;
+        symbol: Symbol.t;
         exchange : Exchange.t;
       } [@@deriving sexp, yojson]
 
