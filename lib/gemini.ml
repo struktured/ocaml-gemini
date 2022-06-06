@@ -206,8 +206,9 @@ module V1 = struct
                   order_id : Int_string.t;
                   client_order_id : string option [@default None];
                   is_auction_fill : bool;
+                  is_clearing_fill: bool;
+                  symbol: Symbol.t;
                   exchange : Exchange.t;
-                  (*break : string option [@default None] (* TODO make enum *) *)
                  } [@@deriving yojson, sexp]
     module T = struct
       let name = "mytrades"
