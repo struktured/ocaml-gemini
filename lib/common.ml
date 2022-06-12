@@ -5,24 +5,24 @@ module Auth = Auth
 module Result = Json.Result
 
 module Int_number = struct
-  type t = int64 [@encoding `number] [@@deriving sexp, yojson]
+  type t = int64 [@encoding `number] [@@deriving sexp, yojson, equal, compare]
   include (Csvfields.Csv.Atom (Int64) :
              Csvfields.Csv.Csvable with type t := t
           )
 end
 
 module Int_string = struct
-  type t = int64 [@encoding `string] [@@deriving sexp, yojson]
+  type t = int64 [@encoding `string] [@@deriving sexp, yojson, equal, compare]
   include (Csvfields.Csv.Atom (Int64) :
              Csvfields.Csv.Csvable with type t := t
           )
 end
 module Decimal_number = struct
-  type t = float [@encoding `number] [@@deriving sexp, yojson]
+  type t = float [@encoding `number] [@@deriving sexp, yojson, equal, compare]
 end
 
 module Decimal_string = struct
-  type t = string [@@deriving sexp, yojson]
+  type t = string [@@deriving sexp, yojson, equal, compare]
   include (Csvfields.Csv.Atom (String) :
              Csvfields.Csv.Csvable with type t := t
           )
@@ -36,7 +36,7 @@ struct
   module T = struct
 
     (** The type of an order side - [`Buy] or [`Sell]. *)
-    type t = [`Buy | `Sell] [@@deriving sexp, enumerate]
+    type t = [`Buy | `Sell] [@@deriving sexp, enumerate, equal, compare]
 
     let to_string = function
       | `Buy -> "buy"
@@ -63,7 +63,7 @@ module Symbol = struct
       | `Bchusd | `Bchbtc | `Bcheth
       | `Lunausd | `Xtzusd
       ]
-    [@@deriving sexp, enumerate]
+    [@@deriving sexp, enumerate, equal, compare]
 
     let to_string : [<t] -> string = function
       | `Btcusd -> "btcusd"
@@ -96,7 +96,7 @@ module Exchange = struct
 
   module T = struct
     (** The exchange type - gemini only, currently. *)
-    type t = [`Gemini] [@@deriving sexp, enumerate]
+    type t = [`Gemini] [@@deriving sexp, enumerate, equal, compare]
     let to_string `Gemini = "gemini"
   end
   include T
@@ -111,7 +111,7 @@ module Timestamp = struct
   module T0 = struct
     (** A timestamp is just a core time instance that
         was converted from some raw json date. *)
-    type t = Time.t [@@deriving sexp]
+    type t = Time.t [@@deriving sexp, equal, compare]
 
     let to_string t =
       Time.to_span_since_epoch t |>
@@ -181,7 +181,7 @@ module Currency = struct
         currently by Gemini.
     *)
     type t = [`Eth | `Btc | `Usd | `Zec | `Bch | `Ltc | `Luna | `Xtz | `Ust]
-    [@@deriving sexp, enumerate]
+    [@@deriving sexp, enumerate, equal, compare]
     let to_string = function
       | `Eth -> "eth"
       | `Btc -> "btc"
@@ -205,7 +205,7 @@ module Order_type = struct
 
     (** The type of order types- only [`Exchange_limit] is
         currently supported. *)
-    type t = [`Exchange_limit] [@@deriving sexp, enumerate]
+    type t = [`Exchange_limit] [@@deriving sexp, enumerate, equal, compare]
     let to_string = function
       | `Exchange_limit -> "exchange limit"
   end
