@@ -6,6 +6,7 @@
   *)
 module Result = struct
   include Result
+
   (** Unify results into tuple [('a , 'b)] if both are ok,
       otherwise produce one of the errors .
   *)
@@ -49,6 +50,7 @@ module type S = sig
     ?separator:char -> Out_channel.t -> t list -> unit
   val csv_save : ?separator:char -> string -> t list -> unit
   end
+
 (** An enumeration encodable as a json string. *)
 module type ENUM_STRING = sig
   type t [@@deriving enumerate]
