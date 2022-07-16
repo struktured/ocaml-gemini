@@ -15,6 +15,7 @@
 open Common
 module Auth = Auth
 module Result = Json.Result
+module Rest = Rest
 
 
 (** Version v1 of the Gemini REST and web socket apis. *)

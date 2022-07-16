@@ -23,6 +23,7 @@ module Error : sig
 
   (** Used to provide more details on a particular error condition *)
   type detail = {reason:string;message:string} [@@deriving sexp, yojson]
+
   (** Application level error conditions *)
   type response = [`Error of detail] [@@deriving sexp]
 
@@ -47,6 +48,7 @@ module Operation : sig
 
     (** The type of the request payload for this REST endpoint. *)
     type request [@@deriving sexp, to_yojson]
+
     (** The type of the response payload for this REST endpoint. *)
     type response [@@deriving sexp, of_yojson]
   end

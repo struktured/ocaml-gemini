@@ -4,6 +4,8 @@ open Common
 module Auth = Auth
 module Result = Result
 
+module Rest = Rest
+
 module V1 = struct
   let path = ["v1"]
   module Side = Side
