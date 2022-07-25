@@ -13,10 +13,12 @@
 *)
 
 open Common
-module Auth = Auth
-module Result = Json.Result
-module Rest = Rest
 
+module Auth = Auth
+module Cfg = Cfg
+module Nonce = Nonce
+module Rest = Rest
+module Result = Json.Result
 
 (** Version v1 of the Gemini REST and web socket apis. *)
 module V1 : sig

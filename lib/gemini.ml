@@ -1,10 +1,11 @@
 open Common
 
-
 module Auth = Auth
-module Result = Result
-
+module Cfg = Cfg
+module Nonce = Nonce
 module Rest = Rest
+module Result = Json.Result
+
 
 module V1 = struct
   let path = ["v1"]
