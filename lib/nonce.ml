@@ -74,7 +74,7 @@ module Request = struct
     | `Ok nonce ->
       return
         {request;nonce;payload}
-    | `Eof -> assert false
+    | `Eof -> failwith("Got unexpected EOF from nonce reader")
 
   let to_yojson {request;nonce;payload} : Yojson.Safe.t =
     match request_nonce_to_yojson {request;nonce} with
