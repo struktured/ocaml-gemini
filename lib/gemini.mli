@@ -19,6 +19,7 @@ module Cfg = Cfg
 module Nonce = Nonce
 module Rest = Rest
 module Result = Json.Result
+module Inf_pipe = Inf_pipe
 
 (** Version v1 of the Gemini REST and web socket apis. *)
 module V1 : sig
