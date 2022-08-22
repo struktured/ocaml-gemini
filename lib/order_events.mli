@@ -159,7 +159,7 @@ include Ws.CHANNEL
 val command : string * Async.Command.t
 
 val client :
-  nonce:int Pipe.Reader.t ->
+  nonce:int Inf_pipe.Reader.t ->
   (module Cfg.S) ->
   ?query:Sexp.t list ->
   ?uri_args:uri_args ->
