@@ -3,8 +3,8 @@ let () =
   with Not_found -> ()
 ;;
 
-#use "topfind";;
-#thread;;
+(*#use "topfind";; *)
+(*#thread;; *)
 #require "core hex async csvfields cohttp.async nocrypto ppx_deriving.runtime ppx_deriving_yojson.runtime ppx_inline_test.runtime-lib ppx_jane zarith uri yojson websocket-async";;
 
 #load "compiler-libs/ocamlcommon.cma";;
