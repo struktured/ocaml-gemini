@@ -283,6 +283,41 @@ module V1 = struct
     include Rest.Make_no_arg(T)
   end
 
+  module Notional_volume = struct
+
+    module T = struct
+      let name = "notionalvolume"
+      let path = path@["notionalvolume"]
+
+      type request = {symbol: Symbol.t option [@default None]; account: string option [@default None]} [@@deriving yojson, sexp]
+      type notional_1d_volume = {
+          date: string (* TODO use strict a date type *);
+          notional_volume: Decimal_number.t;
+      } [@@deriving sexp, yojson]
+      type response =
+          {last_updated_ms: Timestamp.Ms.t;
+           web_maker_fee_bps: Int_number.t;
+           web_taker_fee_bps: Int_number.t;
+           web_auction_fee_bps: Int_number.t;
+           api_maker_fee_bps: Int_number.t;
+           api_taker_fee_bps: Int_number.t;
+           api_auction_fee_bps: Int_number.t;
+           fix_maker_fee_bps: Int_number.t;
+           fix_taker_fee_bps: Int_number.t;
+           fix_auction_fee_bps: Int_number.t;
+           block_maker_fee_bps: Int_number.t;
+           block_taker_fee_bps: Int_number.t;
+           date: string (* TODO use strict a date type *);
+           notional_30d_volume: Decimal_number.t;
+           notional_1d_volume: notional_1d_volume list
+          } [@@deriving yojson, sexp]
+    end
+
+    include T
+    include Rest.Make(T)
+  end
+
+
   let command : Command.t =
     Command.group
       ~summary:"Gemini Command System"
@@ -293,7 +328,10 @@ module V1 = struct
        Tradevolume.command;
        Balances.command;
        Market_data.command;
-       Order_events.command
+       Order_events.command;
+       Notional_volume.command
       ]
+
+
 
 end
