@@ -361,7 +361,7 @@ module Notional_volume :
 
       type request = {symbol: Symbol.t option [@default None]; account: string option [@default None]} [@@deriving of_yojson, sexp]
       type notional_1d_volume = {
-          date: string (* TODO use strict a date type *);
+          date: string (* TODO use strict date type *);
           notional_volume: Decimal_number.t;
       } [@@deriving sexp, yojson]
       type response =
@@ -377,7 +377,7 @@ module Notional_volume :
            fix_auction_fee_bps: Int_number.t;
            block_maker_fee_bps: Int_number.t;
            block_taker_fee_bps: Int_number.t;
-           date: string (* TODO use strict a date type *);
+           date: string (* TODO use strict date type *);
            notional_30d_volume: Decimal_number.t;
            notional_1d_volume: notional_1d_volume list
           } [@@deriving sexp]
