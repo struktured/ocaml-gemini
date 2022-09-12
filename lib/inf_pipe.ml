@@ -33,8 +33,8 @@ end
 
 module type S = sig
 
-  module Reader: sig 
-    type 'a t = private 'a Pipe.Reader.t 
+  module Reader: sig
+    type 'a t = private 'a Pipe.Reader.t
     val create : 'a Pipe.Reader.t  -> 'a t 
   end
   val read : ?consumer:Pipe.Consumer.t -> 'a Reader.t -> 'a Deferred.t
