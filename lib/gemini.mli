@@ -19,6 +19,7 @@ module Cfg = Cfg
 module Nonce = Nonce
 module Rest = Rest
 module Result = Json.Result
+module Inf_pipe = Inf_pipe
 
 (** Version v1 of the Gemini REST and web socket apis. *)
 module V1 : sig
@@ -354,6 +355,46 @@ module V1 : sig
         ] Deferred.t
       val command : string * Command.t
     end
+
+module Notional_volume :
+    sig
+
+      type request = {symbol: Symbol.t option [@default None]; account: string option [@default None]} [@@deriving of_yojson, sexp]
+      type notional_1d_volume = {
+          date: string (* TODO use strict a date type *);
+          notional_volume: Decimal_number.t;
+      } [@@deriving sexp, yojson]
+      type response =
+          {last_updated_ms: Timestamp.Ms.t;
+           web_maker_fee_bps: Int_number.t;
+           web_taker_fee_bps: Int_number.t;
+           web_auction_fee_bps: Int_number.t;
+           api_maker_fee_bps: Int_number.t;
+           api_taker_fee_bps: Int_number.t;
+           api_auction_fee_bps: Int_number.t;
+           fix_maker_fee_bps: Int_number.t;
+           fix_taker_fee_bps: Int_number.t;
+           fix_auction_fee_bps: Int_number.t;
+           block_maker_fee_bps: Int_number.t;
+           block_taker_fee_bps: Int_number.t;
+           date: string (* TODO use strict a date type *);
+           notional_30d_volume: Decimal_number.t;
+           notional_1d_volume: notional_1d_volume list
+          } [@@deriving sexp]
+      include Rest.Operation.S
+        with type request := request
+        with type response := response
+       val post :
+        (module Cfg.S) ->
+        Nonce.reader ->
+        request ->
+        [
+          | Rest.Error.post
+          | `Ok of response
+        ] Deferred.t
+      val command : string * Command.t
+  end
+
   module Market_data = Market_data
   val command : Command.t
 end

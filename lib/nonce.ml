@@ -1,19 +1,19 @@
-type reader = int Pipe.Reader.t
+type reader = int Inf_pipe.Reader.t
 
 module type S = sig
   type t [@@deriving sexp]
 
-  val pipe : init:t -> unit -> int Pipe.Reader.t Deferred.t
+  val pipe : init:t -> unit -> int Inf_pipe.Reader.t Deferred.t
 end
 
 module Counter : S with type t = int = struct
   type t = int [@@deriving sexp]
   let pipe ~init () =
-    Pipe.unfold ~init
+    Inf_pipe.unfold ~init
       ~f:
         (fun s ->
            let s' = s + 1 in
-           Some (s, s') |> return
+           (s, s') |> return
         )
     |> return
 end
@@ -37,7 +37,7 @@ module File = struct
   let pipe ~init:filename () =
     Cfg.create_config_dir () >>= fun () ->
     create_nonce_file ?default:None filename >>= fun () ->
-    Pipe.unfold ~init:() ~f:
+    Inf_pipe.unfold ~init:() ~f:
       (fun _ ->
          Reader.open_file ?buf_len:None
            filename >>= Reader.really_read_line
@@ -49,7 +49,7 @@ module File = struct
          let nonce' = nonce + 1 in
          Writer.save filename
            ~contents:(sprintf "%d\n" nonce') >>= fun () ->
-         return @@ Some (nonce, ())
+         return (nonce, ())
       ) |> return
 
   let default_filename =
@@ -70,11 +70,9 @@ module Request = struct
     {request:string; nonce:int; payload:Yojson.Safe.t option [@default None]}
 
   let make ~request ~nonce ?payload () =
-    Pipe.read nonce >>= function
-    | `Ok nonce ->
+    Inf_pipe.read nonce >>= fun nonce ->
       return
         {request;nonce;payload}
-    | `Eof -> assert false
 
   let to_yojson {request;nonce;payload} : Yojson.Safe.t =
     match request_nonce_to_yojson {request;nonce} with
