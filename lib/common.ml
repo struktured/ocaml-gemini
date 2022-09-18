@@ -46,51 +46,6 @@ struct
   include (Json.Make(T) : Json.S with type t := t)
 end
 
-
-(** A symbol on the gemini exchange - Symbols are two currency
-    names appended together which can be thought as
-    "Buy the first one, Sell the second one". So [`Btcusd] implies
-    you are buying btc and sell usd, effectively exchanging your
-    currency from usd to btc in the process.
-*)
-module Symbol = struct
-  module T = struct
-    (** The type of a symbol pair. See the [Symbol] module for details. *)
-    type t =
-      [ `Btcusd | `Ethusd | `Ethbtc
-      | `Zecusd | `Zecbtc | `Zeceth | `Zecbch | `Zecltc
-      | `Ltcusd | `Ltcbtc | `Ltceth | `Ltcbch
-      | `Bchusd | `Bchbtc | `Bcheth
-      | `Lunausd | `Xtzusd
-      ]
-    [@@deriving sexp, enumerate, equal, compare]
-
-    let to_string : [<t] -> string = function
-      | `Btcusd -> "btcusd"
-      | `Bchusd -> "bchusd"
-      | `Bchbtc -> "bchbtc"
-      | `Bcheth -> "bcheth"
-      | `Ethusd -> "ethusd"
-      | `Ethbtc -> "ethbtc"
-      | `Zecusd -> "zecusd"
-      | `Zecbtc -> "zecbtc"
-      | `Zeceth -> "zeceth"
-      | `Zecbch -> "zecbch"
-      | `Zecltc -> "zecltc"
-      | `Ltcusd -> "ltcusd"
-      | `Ltcbtc -> "ltcbtc"
-      | `Ltceth -> "ltceth"
-      | `Ltcbch -> "ltcbch"
-      | `Lunausd -> "lunausd"
-      | `Xtzusd -> "xtzusd"
-
-
-  end
-  include T
-  include (Json.Make(T) : Json.S with type t := t)
-
-end
-
 (** Represents an exchange type. Only gemini is currently supported *)
 module Exchange = struct
 
@@ -192,6 +147,74 @@ module Currency = struct
       | `Luna -> "luna"
       | `Xtz -> "xtz"
       | `Ust -> "ust"
+  end
+  include T
+  include (Json.Make(T) : Json.S with type t := t)
+
+end
+
+
+(** A symbol on the gemini exchange - Symbols are two currency
+    names appended together which can be thought as
+    "Buy the first one, Sell the second one". So [`Btcusd] implies
+    you are buying btc and sell usd, effectively exchanging your
+    currency from usd to btc in the process.
+*)
+module Symbol = struct
+  module T = struct
+    (** The type of a symbol pair. See the [Symbol] module for details. *)
+    type t =
+      [ `Btcusd | `Ethusd | `Ethbtc
+      | `Zecusd | `Zecbtc | `Zeceth | `Zecbch | `Zecltc
+      | `Ltcusd | `Ltcbtc | `Ltceth | `Ltcbch
+      | `Bchusd | `Bchbtc | `Bcheth
+      | `Lunausd | `Xtzusd
+      ]
+    [@@deriving sexp, enumerate, equal, compare]
+
+    let to_string : [<t] -> string = function
+      | `Btcusd -> "btcusd"
+      | `Bchusd -> "bchusd"
+      | `Bchbtc -> "bchbtc"
+      | `Bcheth -> "bcheth"
+      | `Ethusd -> "ethusd"
+      | `Ethbtc -> "ethbtc"
+      | `Zecusd -> "zecusd"
+      | `Zecbtc -> "zecbtc"
+      | `Zeceth -> "zeceth"
+      | `Zecbch -> "zecbch"
+      | `Zecltc -> "zecltc"
+      | `Ltcusd -> "ltcusd"
+      | `Ltcbtc -> "ltcbtc"
+      | `Ltceth -> "ltceth"
+      | `Ltcbch -> "ltcbch"
+      | `Lunausd -> "lunausd"
+      | `Xtzusd -> "xtzusd"
+
+    let to_currency_pair : [<t] -> Currency.t * Currency.t = function
+      | `Btcusd -> (`Btc, `Usd)
+      | `Bchusd -> (`Bch, `Usd)
+      | `Bchbtc -> (`Bch, `Btc)
+      | `Bcheth -> (`Bch, `Eth)
+      | `Ethusd -> (`Eth, `Usd)
+      | `Ethbtc -> (`Eth, `Btc)
+      | `Zecusd -> (`Zec, `Usd)
+      | `Zecbtc -> (`Zec, `Btc)
+      | `Zeceth -> (`Zec, `Eth)
+      | `Zecbch -> (`Zec, `Bch)
+      | `Zecltc -> (`Zec, `Ltc)
+      | `Ltcusd -> (`Ltc, `Usd)
+      | `Ltcbtc -> (`Ltc, `Btc)
+      | `Ltceth -> (`Ltc, `Eth)
+      | `Ltcbch -> (`Ltc, `Bch)
+      | `Lunausd -> (`Luna, `Usd)
+      | `Xtzusd -> (`Xtz, `Usd)
+
+    let to_currency : [<t] -> Side.t -> Currency.t = fun t side ->
+        to_currency_pair t |> fun (buy, sell) ->
+            match side with
+            | `Buy -> buy
+            | `Sell -> sell
   end
   include T
   include (Json.Make(T) : Json.S with type t := t)
