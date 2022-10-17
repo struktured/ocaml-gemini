@@ -10,12 +10,12 @@ module Inf_pipe = Inf_pipe
 module V1 = struct
   let path = ["v1"]
   module Side = Side
-  module Symbol = Symbol
   module Exchange = Exchange
   module Timestamp = Timestamp
   module Market_data = Market_data
   module Order_events = Order_events
   module Currency = Currency
+  module Symbol = Symbol
   module Order_type = Order_type
 
   module Heartbeat = struct
