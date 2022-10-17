@@ -55,7 +55,7 @@ module V1 : sig
 
       (** The type of an order execution rule. *)
       type t =
-        [ `Auction_only | `Immediate_or_cancel | `Maker_or_cancel ]
+          [ `Auction_only | `Immediate_or_cancel | `Maker_or_cancel ] [@@deriving sexp]
       include Json.S with type t := t
     end
 
@@ -308,6 +308,7 @@ module V1 : sig
       (** The type of a trade volume response, which is a list of list
           of volumes grouped by exchange symbol. *)
       type response = volume list list [@@deriving sexp]
+
       include Rest.Operation.S
         with type request := request
         with type response := response
