@@ -68,7 +68,7 @@ module V1 = struct
         } [@@deriving yojson, sexp]
 
         type response = {
-          client_order_id : string option [@default None];
+          client_order_id : Client_order_id.t option [@default None];
           order_id : Int_string.t;
           id : Int_string.t;
           symbol : Symbol.t;
@@ -99,7 +99,7 @@ module V1 = struct
         let path = path@["new"]
 
         type request = {
-          client_order_id:string;
+          client_order_id:Client_order_id.t;
           symbol:Symbol.t;
           amount:Decimal_string.t;
           price:Decimal_string.t;
@@ -207,7 +207,7 @@ module V1 = struct
                   fee_amount : Decimal_string.t;
                   tid:Int_number.t;
                   order_id : Int_string.t;
-                  client_order_id : string option [@default None];
+                  client_order_id : Client_order_id.t option [@default None];
                   is_auction_fill : bool;
                   is_clearing_fill: bool;
                   symbol: Symbol.t;

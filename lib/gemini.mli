@@ -73,7 +73,7 @@ module V1 : sig
         type request =
           { order_id : Int_number.t; } [@@deriving sexp, of_yojson]
        type response = {
-          client_order_id : string option;
+          client_order_id : Client_order_id.t option;
           order_id : Int_string.t;
           id : Int_string.t;
           symbol : Symbol.t;
@@ -112,7 +112,7 @@ module V1 : sig
       module New :
         sig
           type request = {
-            client_order_id : string;
+            client_order_id : Client_order_id.t;
             symbol : Symbol.t;
             amount : Decimal_string.t;
             price : Decimal_string.t;
@@ -241,7 +241,7 @@ module V1 : sig
         fee_amount : Decimal_string.t;
         tid : Int_number.t;
         order_id : Int_string.t;
-        client_order_id : string option;
+        client_order_id : Client_order_id.t option;
         is_auction_fill : bool;
         is_clearing_fill: bool;
         symbol: Symbol.t;

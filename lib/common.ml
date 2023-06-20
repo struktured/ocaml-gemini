@@ -30,6 +30,10 @@ module Decimal_string = struct
   let to_string t = t
 end
 
+module Client_order_id = struct
+    type t = string [@@deriving sexp, yojson, equal, compare]
+end
+
 (** Represents an order side. *)
 module Side =
 struct
