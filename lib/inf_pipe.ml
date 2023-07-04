@@ -21,6 +21,10 @@ let read_exactly ?consumer t ~num_values =
         | `Exactly e -> e
         | `Fewer _ | `Eof -> assert false
 
+let to_pipe t : 'a Pipe.Reader.t = t
+
+let interleave l = Pipe.interleave l |> Reader.create
+
 let unfold ~init ~f : 'a Reader.t =
     Pipe.unfold ~init ~f:(fun (acc : 's) ->
         f acc >>| fun (acc, s) -> Some (acc, s))
@@ -28,7 +32,6 @@ let unfold ~init ~f : 'a Reader.t =
 let map = Pipe.map
 let filter_map = Pipe.filter_map
 
-let to_pipe t : 'a Pipe.Reader.t = t
 end
 
 module type S = sig
@@ -49,6 +52,7 @@ module type S = sig
   val filter_map :
      ?max_queue_length:int -> 'a Reader.t -> f:('a -> 'b option) -> 'b Reader.t
 
+  val interleave : 'a Reader.t list -> 'a Reader.t
   val to_pipe : 'a Reader.t -> 'a Pipe.Reader.t
 end
 
