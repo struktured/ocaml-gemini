@@ -3,7 +3,7 @@ open Async
 module T = struct
 
 module Reader = struct
-    type 'a t = 'a Pipe.Reader.t [@deriving sexp]
+    type 'a t = 'a Pipe.Reader.t
     let create (reader: 'a Pipe.Reader.t ) : 'a t = reader
 end 
 
