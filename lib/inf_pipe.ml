@@ -7,6 +7,13 @@ module Reader = struct
     let create (reader: 'a Pipe.Reader.t ) : 'a t = reader
 end 
 
+module Writer = struct
+    type 'a t = 'a Pipe.Writer.t
+    let create (writer : 'a Pipe.Writer.t) : 'a t = writer
+end
+
+
+let create = Pipe.create
 let read ?consumer t =
     Pipe.read ?consumer t >>| function `Ok x -> x | `Eof -> assert false
 
@@ -17,9 +24,7 @@ let read_now ?consumer t =
     | `Eof -> assert false
 
 let read_exactly ?consumer t ~num_values =
-      Pipe.read_exactly ?consumer t ~num_values >>| function
-        | `Exactly e -> e
-        | `Fewer _ | `Eof -> assert false
+      Pipe.read_exactly ?consumer t ~num_values >>| function | `Exactly e -> e | `Fewer _ | `Eof -> assert false
 
 let to_pipe t : 'a Pipe.Reader.t = t
 
@@ -32,14 +37,27 @@ let unfold ~init ~f : 'a Reader.t =
 let map = Pipe.map
 let filter_map = Pipe.filter_map
 
-end
+let folding_map = Pipe.folding_map
+let folding_filter_map = Pipe.folding_filter_map
+let folding_filter_map'= Pipe.folding_filter_map'
 
+
+let transfer = Pipe.transfer
+
+end
 module type S = sig
 
   module Reader: sig
     type 'a t = private 'a Pipe.Reader.t
     val create : 'a Pipe.Reader.t  -> 'a t 
   end
+
+  module Writer : sig
+    type 'a t = private 'a Pipe.Writer.t
+    val create : 'a Pipe.Writer.t  -> 'a t 
+  end
+
+  val create: ?info:Sexp.t -> unit -> 'a Reader.t * 'a Writer.t
   val read : ?consumer:Pipe.Consumer.t -> 'a Reader.t -> 'a Deferred.t
   val read_now :
     ?consumer:Pipe.Consumer.t ->
@@ -54,7 +72,11 @@ module type S = sig
 
   val interleave : 'a Reader.t list -> 'a Reader.t
   val to_pipe : 'a Reader.t -> 'a Pipe.Reader.t
-end
 
+  val folding_map : ?max_queue_length:int -> 'a Reader.t -> init:'accum -> f:('accum -> 'a -> ('accum * 'c)) -> 'c Reader.t
+  val folding_filter_map : ?max_queue_length:int -> 'a Reader.t -> init:'accum -> f:('accum -> 'a -> 'accum * ('c option)) -> 'c Reader.t
+  val folding_filter_map' : ?max_queue_length:int -> 'a Reader.t -> init:'accum -> f:('accum -> 'a -> ('accum * ('c option)) Deferred.t) -> 'c Reader.t
+  val transfer: 'a Reader.t -> 'b Writer.t -> f:('a -> 'b) -> unit Deferred.t
+end
 
 include (T : S)
