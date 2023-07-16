@@ -51,12 +51,41 @@ module V1 = struct
   end
 
 
+ module Break_type = struct
+   module T = struct
+     type t = [`Manual | `Full] [@@deriving sexp, enumerate, hash, equal, yojson]
+     let to_string = function `Manual -> "manual" | `Full -> "full"
+   end
+   include T
+   include (Json.Make(T) : Json.S with type t:= t)
+  end
 
-  module Order =
+ module Trade = struct
+     type t = {price:Decimal_string.t;
+                  amount:Decimal_string.t;
+                  timestamp:Timestamp.Sec.t;
+                  timestampms:Timestamp.Ms.t;
+                  type_: Side.t [@key "type"];
+                  aggressor: bool;
+                  fee_currency: Currency.t;
+                  fee_amount : Decimal_string.t;
+                  tid:Int_number.t;
+                  order_id : Int_string.t;
+                  client_order_id : Client_order_id.t option [@default None];
+                  is_auction_fill : bool;
+                  is_clearing_fill: bool;
+                  symbol: Symbol.t;
+                  exchange : Exchange.t;
+                  break: Break_type.t option [@default None]
+                 } [@@deriving yojson, sexp]
+ end
+
+ module Order =
   struct
     let name = "order"
     let path = path@["order"]
 
+    
     module Status =
     struct
       module T = struct
@@ -87,6 +116,7 @@ module V1 = struct
           options : Order_execution_option.t list;
           price : Decimal_string.t;
           original_amount : Decimal_string.t;
+          trades: Trade.t list [@default []]
         } [@@deriving yojson, sexp]
       end
       include T
@@ -197,23 +227,7 @@ module V1 = struct
   end
 
   module Mytrades = struct
-    type trade = {price:Decimal_string.t;
-                  amount:Decimal_string.t;
-                  timestamp:Timestamp.Sec.t;
-                  timestampms:Timestamp.Ms.t;
-                  type_: Side.t [@key "type"];
-                  aggressor: bool;
-                  fee_currency: Currency.t;
-                  fee_amount : Decimal_string.t;
-                  tid:Int_number.t;
-                  order_id : Int_string.t;
-                  client_order_id : Client_order_id.t option [@default None];
-                  is_auction_fill : bool;
-                  is_clearing_fill: bool;
-                  symbol: Symbol.t;
-                  exchange : Exchange.t;
-                 } [@@deriving yojson, sexp]
-    module T = struct
+   module T = struct
       let name = "mytrades"
       let path = path@["mytrades"]
       type request =
@@ -221,7 +235,7 @@ module V1 = struct
           limit_trades: int option [@default None];
           timestamp: Timestamp.Sec.t option [@default None]
         } [@@deriving sexp, yojson]
-      type response = trade list [@@deriving of_yojson, sexp]
+      type response = Trade.t list [@@deriving of_yojson, sexp]
     end
     include T
     include Rest.Make(T)

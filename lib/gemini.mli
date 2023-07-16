@@ -59,6 +59,34 @@ module V1 : sig
       include Json.S with type t := t
     end
 
+
+(** Represents different break types when trades are busted *)
+module Break_type : sig
+     type t = [`Manual | `Full] [@@deriving sexp, enumerate, hash, equal]
+   include Json.S with type t:= t
+  end
+
+module Trade : sig
+     type t = {price:Decimal_string.t;
+                  amount:Decimal_string.t;
+                  timestamp:Timestamp.Sec.t;
+                  timestampms:Timestamp.Ms.t;
+                  type_: Side.t [@key "type"];
+                  aggressor: bool;
+                  fee_currency: Currency.t;
+                  fee_amount : Decimal_string.t;
+                  tid:Int_number.t;
+                  order_id : Int_string.t;
+                  client_order_id : Client_order_id.t option [@default None];
+                  is_auction_fill : bool;
+                  is_clearing_fill: bool;
+                  symbol: Symbol.t;
+                  exchange : Exchange.t;
+                  break: Break_type.t option [@default None]
+                 } [@@deriving of_yojson, sexp]
+ end
+
+
   (** Represents an order on the Gemini trading exchange over
       the REST api. *)
   module Order :
@@ -92,6 +120,7 @@ module V1 : sig
           options : Order_execution_option.t list;
           price : Decimal_string.t;
           original_amount : Decimal_string.t;
+          trades: Trade.t list
         } [@@deriving sexp]
         include Rest.Operation.S
           with type request := request
@@ -229,26 +258,6 @@ module V1 : sig
    module Mytrades :
     sig
 
-      (** Represents one instance of a trade exchanged on Gemini. *)
-      type trade = {
-        price : Decimal_string.t;
-        amount : Decimal_string.t;
-        timestamp : Timestamp.Sec.t;
-        timestampms : Timestamp.Ms.t;
-        type_ : Side.t;
-        aggressor : bool;
-        fee_currency : Currency.t;
-        fee_amount : Decimal_string.t;
-        tid : Int_number.t;
-        order_id : Int_string.t;
-        client_order_id : Client_order_id.t option;
-        is_auction_fill : bool;
-        is_clearing_fill: bool;
-        symbol: Symbol.t;
-        exchange : Exchange.t;
-      } [@@deriving sexp, yojson]
-
-
       (** Trade request parameters. *)
       type request = {
         symbol : Symbol.t;
@@ -258,7 +267,7 @@ module V1 : sig
 
 
       (** Mytrades repsonse type- the type of a list trades. *)
-      type response = trade list [@@deriving sexp]
+      type response = Trade.t list [@@deriving sexp]
 
       include Rest.Operation.S
         with type request := request
