@@ -57,13 +57,14 @@ module V1 : sig
     include Json.S with type t := t
   end
 
-  (** Represents different break types when trades are busted *)
+  (** Represents different break types when trades are busted. *)
   module Break_type : sig
     type t = [ `Manual | `Full ] [@@deriving sexp, enumerate, hash, equal]
 
     include Json.S with type t := t
   end
 
+  (** Represents a single trade. *)
   module Trade : sig
     type t = {
       price : Decimal_string.t;
