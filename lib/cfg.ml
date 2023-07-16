@@ -1,35 +1,31 @@
 let create_config_dir () =
-  let dirname = sprintf "%s/%s"
-      (Unix.getenv_exn "HOME") ".gemini" in
-  try_with ~extract_exn:true
-    (fun () -> Unix.mkdir ?p:None ?perm:None dirname) >>=
-  function
+  let dirname = sprintf "%s/%s" (Unix.getenv_exn "HOME") ".gemini" in
+  try_with ~extract_exn:true (fun () -> Unix.mkdir ?p:None ?perm:None dirname)
+  >>= function
   | Result.Ok () -> Deferred.unit
-  | Result.Error
-      (Unix.Unix_error (Unix.Error.EEXIST, _, _)) -> Deferred.unit
+  | Result.Error (Unix.Unix_error (Unix.Error.EEXIST, _, _)) -> Deferred.unit
   | Result.Error e ->
-    Log.Global.error "failed to create gemini config directory
-        at %S." dirname; raise e
+      Log.Global.error
+        "failed to create gemini config directory\n        at %S." dirname;
+      raise e
 
 let param ?default ~name ~env () =
-  let name = sprintf "GEMINI_%s_%s"
-      (String.uppercase env) name in
+  let name = sprintf "GEMINI_%s_%s" (String.uppercase env) name in
   match Unix.getenv name with
   | Some param -> param
-  | None ->
-    match default with
-    | None ->
-      failwithf "Environment variable \"%s\" must be specified"
-        name ()
-    | Some default -> default
+  | None -> (
+      match default with
+      | None ->
+          failwithf "Environment variable \"%s\" must be specified" name ()
+      | Some default -> default)
 
 let host ~env =
-  let env = String.lowercase env in 
+  let env = String.lowercase env in
   match env with
   | "production" -> sprintf "api.gemini.com"
   | _ -> sprintf "api.%s.gemini.com" env
-let version_1 = "v1"
 
+let version_1 = "v1"
 
 (** Gemini configuration. These values are the only
     necessary parameters and secrets to connect to an endpoint.
@@ -62,14 +58,12 @@ let make env =
   end in
   (module M : S)
 
-
 (** Creates a configuration module for the sandbox environment.
     Will query the unix environment for the necessary parameters.
 
     It is recommended to generate this module exactly once in your
     program. *)
-module Sandbox () =
-struct
+module Sandbox () = struct
   include (val make "sandbox" : S)
 end
 
@@ -78,8 +72,7 @@ end
 
     It is recommended to generate this module exactly once in your
     program. *)
-module Production () =
-struct
+module Production () = struct
   include (val make "production" : S)
 end
 
@@ -89,25 +82,24 @@ end
 let of_string s =
   match String.lowercase s with
   | "production" ->
-    let module Cfg : S = Production () in
-    (module Cfg : S)
+      let module Cfg : S = Production () in
+      (module Cfg : S)
   | "sandbox" ->
-    let module Cfg : S = Sandbox () in
-    (module Cfg : S)
+      let module Cfg : S = Sandbox () in
+      (module Cfg : S)
   | unsupported_env ->
-    failwithf "environment %s not supported"
-      unsupported_env ()
+      failwithf "environment %s not supported" unsupported_env ()
 
 let arg_type = Command.Arg_type.create of_string
+
 let param =
   Command.Param.(
     flag "-cfg" (optional arg_type)
-      ~doc:(
-        sprintf "STRING the configuration the client will connect with \
-                 (eg. sandbox or production. defaults to sandbox). Use \
-                 GEMINI_ENV to override the default value."
-      )
-  )
+      ~doc:
+        (sprintf
+           "STRING the configuration the client will connect with (eg. sandbox \
+            or production. defaults to sandbox). Use GEMINI_ENV to override \
+            the default value."))
 
 (** Ensures a configuration chosen given an optional configuration module,
     usually provided from the command line. If the module is
@@ -116,9 +108,8 @@ let param =
     environment variables exist. *)
 let or_default param =
   match param with
-  | None ->
-    (match Unix.getenv "GEMINI_ENV" with
-     | Some env -> of_string env
-     | None -> (module Sandbox())
-    )
+  | None -> (
+      match Unix.getenv "GEMINI_ENV" with
+      | Some env -> of_string env
+      | None -> (module Sandbox ()))
   | Some param -> param
