@@ -83,9 +83,12 @@ module Timestamp = struct
           Result.Error
             (sprintf "expected float as json but got %S"
                (Yojson.Safe.pretty_to_string json))
-      | `Ok f -> span_fn f |> Time_float_unix.of_span_since_epoch |> fun ok -> Result.Ok ok
+      | `Ok f ->
+          span_fn f |> Time_float_unix.of_span_since_epoch |> fun ok ->
+          Result.Ok ok
 
-    let of_yojson (ms : Yojson.Safe.t) = of_yojson_with_span Time_float_unix.Span.of_ms ms
+    let of_yojson (ms : Yojson.Safe.t) =
+      of_yojson_with_span Time_float_unix.Span.of_ms ms
 
     let of_string s =
       of_yojson (`String s) |> function

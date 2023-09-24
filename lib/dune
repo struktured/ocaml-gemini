@@ -2,7 +2,7 @@
   (name gemini)
   (public_name gemini)
   (flags
-    :standard -w -39
+    :standard -w -73
     -open Core
     -open Async
   )
