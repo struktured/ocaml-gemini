@@ -41,7 +41,7 @@ end) : CSV_OF_EVENTS with module Event_type = Event_type = struct
   module Event_type = Event_type
 
   let add (t : t) (event_type : Event_type.t) (module Event : EVENT_CSVABLE) =
-    Event_type.Map.add_multi t ~key:event_type
+    Map.add_multi t ~key:event_type
       ~data:(module Event : EVENT_CSVABLE)
 
   let add' (t : t) (type event) (event_type : Event_type.t)
@@ -54,23 +54,23 @@ end) : CSV_OF_EVENTS with module Event_type = Event_type = struct
     add t event_type (module E)
 
   let csv_header (t : t) event_type =
-    Event_type.Map.find_multi t event_type
+    Map.find_multi t event_type
     |> List.hd
     |> Option.map ~f:(fun (module Event : EVENT_CSVABLE) -> Event.csv_header)
 
   let get (t : t) (event_type : Event_type.t) =
-    Event_type.Map.find_multi t event_type
+    Map.find_multi t event_type
     |> List.concat_map ~f:(fun (module Event : EVENT_CSVABLE) ->
            Event.events |> List.map ~f:Event.row_of_t)
 
   let write ?dir (t : t) (event_type : Event_type.t) =
-    let dir = match dir with None -> Core.Unix.getcwd () | Some dir -> dir in
+    let dir = match dir with None -> Core_unix.getcwd () | Some dir -> dir in
     let filename =
       Filename.concat dir (sprintf "%s.csv" (Event_type.to_string event_type))
     in
     let header =
       try
-        let stat = Core.Unix.stat filename in
+        let stat = Core_unix.stat filename in
         if Int64.(equal stat.st_size zero) then csv_header t event_type
         else (
           Log.Global.debug "ws: no csv header";
@@ -84,7 +84,7 @@ end) : CSV_OF_EVENTS with module Event_type = Event_type = struct
       filename ~f:(fun out ->
         Option.iter header ~f:(fun header ->
             Csv_support.write_header out header);
-        Event_type.Map.find_multi t event_type
+        Map.find_multi t event_type
         |> List.fold ~init:0 ~f:(fun acc (module Event : EVENT_CSVABLE) ->
                let events = Event.events in
                let len = List.length events in
@@ -162,10 +162,10 @@ module Impl (Channel : CHANNEL) = struct
       Option.map query ~f:(fun l ->
           List.fold ~init:String.Map.empty l ~f:(fun map q ->
               let key, data = Channel.encode_query (Channel.query_of_sexp q) in
-              String.Map.add_multi map ~key ~data)
+              Map.add_multi map ~key ~data)
           |> fun map ->
-          let keys = String.Map.keys map in
-          List.map keys ~f:(fun k -> (k, String.Map.find_multi map k)))
+          let keys = Map.keys map in
+          List.map keys ~f:(fun k -> (k, Map.find_multi map k)))
     in
     let uri =
       Uri.make ~host:Cfg.api_host ~scheme:"https" ?query

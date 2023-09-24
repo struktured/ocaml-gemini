@@ -418,7 +418,7 @@ module T = struct
         let timestamp =
           Option.(
             first_some update.timestamp update.timestamp
-            |> value ~default:(Time.now ()))
+            |> value ~default:(Time_float_unix.now ()))
         in
         Array.fold ~init:csv_of_events update.events
           ~f:(fun csv_of_events (event : event) ->

@@ -12,6 +12,7 @@
   (libraries
               async
               cohttp-async
+              core_unix.command_unix
               csvfields
               ppx_deriving_yojson.runtime
               ppx_csv_conv

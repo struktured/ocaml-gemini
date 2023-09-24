@@ -57,7 +57,9 @@ module type S = sig
     val create : 'a Pipe.Writer.t -> 'a t
   end
 
-  val create : ?info:Sexp.t -> unit -> 'a Reader.t * 'a Writer.t
+  val create :
+    ?size_budget:int -> ?info:Sexp.t -> unit -> 'a Reader.t * 'a Writer.t
+
   val read : ?consumer:Pipe.Consumer.t -> 'a Reader.t -> 'a Deferred.t
 
   val read_now :

@@ -33,7 +33,7 @@ module File = struct
     create_nonce_file ?default:None filename >>= fun () ->
     Inf_pipe.unfold ~init:() ~f:(fun _ ->
         (Reader.open_file ?buf_len:None filename
-         >>= Reader.really_read_line ~wait_time:(Time.Span.of_ms 1.0)
+         >>= Reader.really_read_line ~wait_time:(Time_float_unix.Span.of_ms 1.0)
          >>= function
          | None -> return 0
          | Some nonce -> return @@ Int.of_string nonce)

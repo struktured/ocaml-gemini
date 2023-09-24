@@ -62,12 +62,13 @@ end
     by various gemini endpoints. *)
 module Timestamp = struct
   module T0 = struct
-    type t = Time.t [@@deriving sexp, equal, compare]
+    type t = Time_float_unix.t [@@deriving sexp, equal, compare]
     (** A timestamp is just a core time instance that
         was converted from some raw json date. *)
 
     let to_string t =
-      Time.to_span_since_epoch t |> Time.Span.to_ms |> Float.to_string
+      Time_float_unix.to_span_since_epoch t
+      |> Time_float_unix.Span.to_ms |> Float.to_string
 
     let to_yojson t = to_string t |> fun s -> `String s
 
@@ -82,9 +83,9 @@ module Timestamp = struct
           Result.Error
             (sprintf "expected float as json but got %S"
                (Yojson.Safe.pretty_to_string json))
-      | `Ok f -> span_fn f |> Time.of_span_since_epoch |> fun ok -> Result.Ok ok
+      | `Ok f -> span_fn f |> Time_float_unix.of_span_since_epoch |> fun ok -> Result.Ok ok
 
-    let of_yojson (ms : Yojson.Safe.t) = of_yojson_with_span Time.Span.of_ms ms
+    let of_yojson (ms : Yojson.Safe.t) = of_yojson_with_span Time_float_unix.Span.of_ms ms
 
     let of_string s =
       of_yojson (`String s) |> function
@@ -108,7 +109,7 @@ module Timestamp = struct
     include T
 
     let of_yojson (sec : Yojson.Safe.t) =
-      of_yojson_with_span Time.Span.of_sec sec
+      of_yojson_with_span Time_float_unix.Span.of_sec sec
 
     let to_yojson (sec : t) = to_yojson sec
   end
