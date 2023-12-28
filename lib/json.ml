@@ -2,7 +2,7 @@
 
 
 (** Result specification when deserializing raw
-    json into something strongly in typed ocaml.
+    json into something in strongly typed ocaml.
   *)
 module Result = struct
   include Result
@@ -19,11 +19,24 @@ module Result = struct
       )
     | Result.Error _ as e -> e
 
+
+   (** Evaluates [f err] if [t] is an error, t otherwise. *)
+   let on_error (t:('a, 'err) t) ~(f:'err -> ('a, 'err) t) =
+        match t with 
+        | Result.Ok _ as ok -> ok
+        | Result.Error err ->
+                f err
+
+
 end
 
 
 module type S = sig
-  type t [@@deriving yojson, enumerate]
+  type t [@@deriving yojson, enumerate, sexp]
+  module Enum_or_string : sig     
+      type enum = t [@@deriving enumerate, sexp]
+      type t =  [`Enum of enum | `String of string] [@@deriving yojson, sexp] 
+  end
   val dict : (string * t) list
   val of_string_opt : string -> t option
   val error_message : string -> string
@@ -53,13 +66,13 @@ module type S = sig
 
 (** An enumeration encodable as a json string. *)
 module type ENUM_STRING = sig
-  type t [@@deriving enumerate]
+  type t [@@deriving enumerate, sexp]
   val to_string : t -> string
 end
 
 (** Produce json encoders and decoders given an enumerated
     type and its string representations. *)
-module Make(E:ENUM_STRING) : S with type t = E.t = struct
+module Make(E:ENUM_STRING)  : S with type t = E.t  = struct
 
   module T = struct
   let dict = List.zip_exn
@@ -87,7 +100,7 @@ module Make(E:ENUM_STRING) : S with type t = E.t = struct
                       ~message:(error_message x)
 
   let to_yojson t = `String (E.to_string t)
-
+    
   let of_yojson (json : Yojson.Safe.t) =
     match json with
     | `String s ->
@@ -99,7 +112,34 @@ module Make(E:ENUM_STRING) : S with type t = E.t = struct
         Result.failf "expected json string but got %S"
           (Yojson.Safe.to_string json)
 
+    
   include E
+
+  module Enum_or_string = struct
+     type enum = t [@@deriving enumerate, yojson, sexp]
+     type t = [`Enum of enum | `String of string] [@@deriving yojson, sexp]
+
+     let enum_string_of_yojson (json:Yojson.Safe.t) (_:'err) : (t, string) result = match json with 
+     | `String _ as s -> Result.Ok s
+     | #Yojson.Safe.t -> 
+        Result.failf "expected json string but got %S"
+          (Yojson.Safe.to_string json)
+
+     let enum_of_yojson json = enum_of_yojson json |> Result.map ~f:(fun x -> (`Enum x :> t))
+
+     let of_yojson (json:Yojson.Safe.t) : t Ppx_deriving_yojson_runtime.error_or =
+         Result.on_error (enum_of_yojson json) ~f:(enum_string_of_yojson json) 
+
+    let sexp_of_t t : Sexp.t = (match t with `String s -> s | `Enum e -> (E.to_string e)) |> String.uppercase |> fun s -> Sexp.Atom s
+    let t_of_sexp sexp : t = match sexp with 
+    | Sexp.Atom s -> 
+        Option.value_map (of_string_opt s) ~f:(fun s -> `Enum s) ~default:(`String (String.uppercase s))
+    | (_sexp:Sexp.t) -> failwith "bad"
+         
+         
+  end
+
+
   end
   include T
   include (Csvfields.Csv.Atom(T) :

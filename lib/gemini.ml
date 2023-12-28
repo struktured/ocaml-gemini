@@ -269,7 +269,7 @@ module V1 = struct
 
       type request = unit [@@deriving yojson, sexp]
       type balance =
-        {currency:Currency.t;
+          {currency:Currency.Enum_or_string.t ;
          amount:Decimal_string.t;
          available:Decimal_string.t;
          available_for_withdrawal:Decimal_string.t

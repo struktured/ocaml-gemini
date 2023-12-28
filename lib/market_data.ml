@@ -430,7 +430,7 @@ end
       let event_id = update.event_id in
       let timestamp =
         Option.(first_some update.timestamp
-                   update.timestamp |> value ~default:(Time.now())
+                   update.timestamp |> value ~default:(Time_float.now())
                ) in
       Array.fold ~init:csv_of_events update.events
         ~f:

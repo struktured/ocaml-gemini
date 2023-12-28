@@ -334,7 +334,7 @@ module V1 : sig
       (** The type of a balance for one specific currency. *)
       type balance =
       {
-        currency : Currency.t;
+        currency : Currency.Enum_or_string.t;
         amount : Decimal_string.t;
         available : Decimal_string.t;
         available_for_withdrawal : Decimal_string.t;

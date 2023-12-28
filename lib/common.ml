@@ -70,11 +70,11 @@ module Timestamp = struct
   module T0 = struct
     (** A timestamp is just a core time instance that
         was converted from some raw json date. *)
-    type t = Time.t [@@deriving sexp, equal, compare]
+    type t = Time_float_unix.t [@@deriving sexp, equal, compare]
 
     let to_string t =
-      Time.to_span_since_epoch t |>
-      Time.Span.to_ms |>
+      Time_float_unix.to_span_since_epoch t |>
+      Time_float_unix.Span.to_ms |>
       Float.to_string
 
     let to_yojson t =
@@ -99,10 +99,10 @@ module Timestamp = struct
              (Yojson.Safe.pretty_to_string json))
       | `Ok f ->
         span_fn f |>
-        Time.of_span_since_epoch |>
+        Time_float_unix.of_span_since_epoch |>
         fun ok -> Result.Ok ok
     let of_yojson (ms:Yojson.Safe.t) =
-      of_yojson_with_span Time.Span.of_ms ms
+      of_yojson_with_span Time_float_unix.Span.of_ms ms
     let of_string s = of_yojson (`String s) |> function
       | Result.Error e -> failwith e | Result.Ok x -> x
   end
@@ -124,7 +124,7 @@ module Timestamp = struct
   struct
     include T
     let of_yojson (sec:Yojson.Safe.t) =
-      of_yojson_with_span Time.Span.of_sec sec
+      of_yojson_with_span Time_float_unix.Span.of_sec sec
     let to_yojson (sec:t) = to_yojson sec
   end
 
@@ -139,8 +139,12 @@ module Currency = struct
     (** An enumerated set of all supported currencies supported
         currently by Gemini.
     *)
-    type t = [`Eth | `Btc | `Usd | `Zec | `Bch | `Ltc | `Luna | `Xtz | `Ust]
-    [@@deriving sexp, enumerate, equal, compare]
+    type t = [ `Eth | `Btc | `Usd | `Zec | `Bch | `Ltc | `Luna 
+             | `Xtz | `Ust | `Link | `Aave | `Crv | `Inj 
+             | `Matic | `Ftm | `Doge | `Cube | `Chz | `Dot
+             | `Rare | `Qnt] [@@deriving sexp, enumerate, equal, compare]
+
+    
     let to_string = function
       | `Eth -> "eth"
       | `Btc -> "btc"
@@ -151,9 +155,23 @@ module Currency = struct
       | `Luna -> "luna"
       | `Xtz -> "xtz"
       | `Ust -> "ust"
+      | `Link -> "link"
+      | `Aave -> "aave"
+      | `Crv -> "crv"
+      | `Inj -> "inj"
+      | `Matic -> "matic"
+      | `Ftm -> "ftm"
+      | `Doge -> "doge"
+      | `Cube -> "cube"
+      | `Chz -> "chz"
+      | `Dot -> "dot"
+      | `Rare -> "rare"
+      | `Qnt -> "qnt"
+
   end
   include T
   include (Json.Make(T) : Json.S with type t := t)
+    
 
 end
 
@@ -172,7 +190,10 @@ module Symbol = struct
       | `Zecusd | `Zecbtc | `Zeceth | `Zecbch | `Zecltc
       | `Ltcusd | `Ltcbtc | `Ltceth | `Ltcbch
       | `Bchusd | `Bchbtc | `Bcheth
-      | `Lunausd | `Xtzusd
+      | `Lunausd | `Xtzusd | `Linkusd | `Aaveusd 
+      | `Crvusd | `Injusd | `Maticusd | `Ftmusd
+      | `Dogeusd | `Cubeusd | `Chzusd | `Dotusd
+      | `Rareusd | `Qntusd
       ]
     [@@deriving sexp, enumerate, equal, compare]
 
@@ -193,7 +214,19 @@ module Symbol = struct
       | `Ltceth -> "ltceth"
       | `Ltcbch -> "ltcbch"
       | `Lunausd -> "lunausd"
+      | `Linkusd -> "linkusd"
       | `Xtzusd -> "xtzusd"
+      | `Aaveusd -> "aaveusd"
+      | `Crvusd -> "crvusd"
+      | `Injusd -> "injusd"
+      | `Maticusd -> "maticusd"
+      | `Ftmusd -> "ftmusd"
+      | `Dogeusd -> "dogeusd"
+      | `Cubeusd -> "cubeusd"
+      | `Chzusd -> "chzusd"
+      | `Dotusd -> "dotusd"
+      | `Rareusd -> "rareusd"
+      | `Qntusd -> "qntusd"
 
     let to_currency_pair : [<t] -> Currency.t * Currency.t = function
       | `Btcusd -> (`Btc, `Usd)
@@ -212,7 +245,18 @@ module Symbol = struct
       | `Ltceth -> (`Ltc, `Eth)
       | `Ltcbch -> (`Ltc, `Bch)
       | `Lunausd -> (`Luna, `Usd)
+      | `Linkusd -> (`Link, `Usd)
       | `Xtzusd -> (`Xtz, `Usd)
+      | `Aaveusd -> (`Aave, `Usd)
+      | `Crvusd -> (`Crv, `Usd)
+      | `Injusd -> (`Inj, `Usd)
+      | `Maticusd -> (`Matic, `Usd)
+      | `Ftmusd -> (`Ftm, `Usd)
+      | `Cubeusd -> (`Cube, `Usd)
+      | `Chzusd -> (`Chz, `Usd)
+      | `Dotusd -> (`Dot, `Usd)
+      | `Rareusd -> (`Rare, `Usd)
+      | `Qntusd -> (`Qnt, `Usd)
 
     let to_currency : [<t] -> Side.t -> Currency.t = fun t side ->
         to_currency_pair t |> fun (buy, sell) ->

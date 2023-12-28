@@ -41,7 +41,7 @@ module File = struct
       (fun _ ->
          Reader.open_file ?buf_len:None
            filename >>= Reader.really_read_line
-           ~wait_time:(Time.Span.of_ms 1.0) >>=
+           ~wait_time:(Time_float.Span.of_ms 1.0) >>=
          (function
            | None -> return 0
            | Some nonce -> return @@ Int.of_string nonce
