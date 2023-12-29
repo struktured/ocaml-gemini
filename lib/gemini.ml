@@ -71,7 +71,7 @@ module V1 = struct
           { client_order_id : Client_order_id.t option; [@default None]
             order_id : Int_string.t;
             id : Int_string.t;
-            symbol : Symbol.t;
+            symbol : Symbol.Enum_or_string.t;
             exchange : Exchange.t;
             avg_execution_price : Decimal_string.t;
             side : Side.t;
@@ -212,14 +212,14 @@ module V1 = struct
         timestampms : Timestamp.Ms.t;
         type_ : Side.t; [@key "type"]
         aggressor : bool;
-        fee_currency : Currency.t;
+        fee_currency : Currency.Enum_or_string.t;
         fee_amount : Decimal_string.t;
         tid : Int_number.t;
         order_id : Int_string.t;
         client_order_id : Client_order_id.t option; [@default None]
         is_auction_fill : bool;
         is_clearing_fill : bool;
-        symbol : Symbol.t;
+        symbol : Symbol.Enum_or_string.t;
         exchange : Exchange.t
       }
     [@@deriving yojson, sexp]
@@ -246,9 +246,9 @@ module V1 = struct
   module Tradevolume = struct
     type volume =
       { account_id : (Int_number.t option[@default None]);
-        symbol : Symbol.t;
-        base_currency : Currency.t;
-        notional_currency : Currency.t;
+        symbol : Symbol.Enum_or_string.t;
+        base_currency : Currency.Enum_or_string.t;
+        notional_currency : Currency.Enum_or_string.t;
         data_date : string;
             (*TODO use timestamp or a date module with MMMM-DD-YY *)
         total_volume_base : Decimal_number.t;

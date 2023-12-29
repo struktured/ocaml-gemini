@@ -80,7 +80,7 @@ module V1 : sig
         { client_order_id : Client_order_id.t option;
           order_id : Int_string.t;
           id : Int_string.t;
-          symbol : Symbol.t;
+          symbol : Symbol.Enum_or_string.t;
           exchange : Exchange.t;
           avg_execution_price : Decimal_string.t;
           side : Side.t;
@@ -251,14 +251,14 @@ module V1 : sig
         timestampms : Timestamp.Ms.t;
         type_ : Side.t;
         aggressor : bool;
-        fee_currency : Currency.t;
+        fee_currency : Currency.Enum_or_string.t;
         fee_amount : Decimal_string.t;
         tid : Int_number.t;
         order_id : Int_string.t;
         client_order_id : Client_order_id.t option;
         is_auction_fill : bool;
         is_clearing_fill : bool;
-        symbol : Symbol.t;
+        symbol : Symbol.Enum_or_string.t;
         exchange : Exchange.t
       }
     [@@deriving sexp, yojson]
@@ -295,9 +295,9 @@ module V1 : sig
         Gemini trading exchange. *)
     type volume =
       { account_id : Int_number.t option;
-        symbol : Symbol.t;
-        base_currency : Currency.t;
-        notional_currency : Currency.t;
+        symbol : Symbol.Enum_or_string.t;
+        base_currency : Currency.Enum_or_string.t;
+        notional_currency : Currency.Enum_or_string.t;
         data_date : string;
         total_volume_base : Decimal_number.t;
         maker_buy_sell_ratio : Decimal_number.t;
