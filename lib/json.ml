@@ -74,7 +74,13 @@ module type S = sig
       ]
     [@@deriving yojson, sexp]
 
+    include Csvfields.Csv.Stringable with type t := t
+
     include CSVABLE with type t := t
+
+    val to_enum : t -> enum option
+
+    val of_enum : enum -> t
   end
 
   val dict : (string * t) list
@@ -151,29 +157,34 @@ module Make (E : ENUM_STRING) : S with type t = E.t = struct
             t Ppx_deriving_yojson_runtime.error_or =
           Result.on_error (enum_of_yojson json) ~f:(enum_string_of_yojson json)
 
-        let sexp_of_t t : Sexp.t =
-          ( match t with
-          | `String s -> s
-          | `Enum e -> E.to_string e )
-          |> String.uppercase
-          |> fun s -> Sexp.Atom s
-
         let t_of_sexp sexp : t =
           match sexp with
           | Sexp.Atom s ->
             Option.value_map (of_string_opt s)
               ~f:(fun s -> `Enum s)
               ~default:(`String (String.uppercase s))
-          | (_sexp : Sexp.t) -> failwith "bad"
+          | sexp ->
+            failwiths ~here:[%here]
+              "invalid sexp expression for enum_or_string type. expected atom \
+               but got:"
+              sexp Fn.id
 
         let to_string x =
           match x with
           | `Enum x -> to_string x
           | `String s -> s
 
+        let sexp_of_t t : Sexp.t =
+          to_string t |> String.uppercase |> fun s -> Sexp.Atom s
+
+        let to_enum = function
+          | `Enum t -> Some t
+          | `String _ -> None
+
+        let of_enum e = `Enum e
+
         let of_string s =
-          of_string_opt s
-          |> Option.value_map ~f:(fun x -> `Enum x) ~default:(`String s)
+          of_string_opt s |> Option.value_map ~f:of_enum ~default:(`String s)
       end
 
       include T
