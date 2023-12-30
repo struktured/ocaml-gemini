@@ -175,4 +175,4 @@ val client :
   ?query:Sexp.t list ->
   ?uri_args:uri_args ->
   unit ->
-  response Pipe.Reader.t Deferred.t
+  (response, string) result Pipe.Reader.t Deferred.t

@@ -224,9 +224,9 @@ module Impl (Channel : CHANNEL) = struct
       Log.Global.info "input pipe established for channel %s" Channel.name;
       Log.Global.flushed () >>| fun () ->
       Pipe.map r ~f:(fun s ->
-          Yojson.Safe.from_string s |> Channel.response_of_yojson
-          |> Result.ok_or_failwith )
+          Yojson.Safe.from_string s |> Channel.response_of_yojson )
     in
+
     let hostport = Host_and_port.create ~host ~port in
     Tcp.(with_connection Where_to_connect.(of_host_and_port hostport) tcp_fun)
 
@@ -345,13 +345,20 @@ module Impl (Channel : CHANNEL) = struct
         Log.Global.debug ~tags "wrote csv response events";
         ()
       in
-      let pipe_reader response =
+      let ok_pipe_reader response =
         append_to_csv response;
         channel_to_sexp_str response
       in
       client (module Cfg) ?query ?uri_args ~nonce () >>= fun pipe ->
       Log.Global.debug "Broadcasting channel %s to stderr..." Channel.name;
-      Pipe.transfer pipe Writer.(pipe (Lazy.force stderr)) ~f:pipe_reader
+      let pipe =
+        Pipe.filter_map pipe ~f:(function
+          | Result.Ok ok -> Some ok
+          | Result.Error e ->
+            Log.Global.error "Failed to parse last event: %s" e;
+            None )
+      in
+      Pipe.transfer pipe Writer.(pipe (Lazy.force stderr)) ~f:ok_pipe_reader
     in
     ( Channel.name,
       Command.async_spec
