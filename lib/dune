@@ -11,6 +11,7 @@
   (library_flags -linkall)
   (libraries
               async
+              core_unix.command_unix
               cohttp-async
               csvfields
               ppx_deriving_yojson.runtime
@@ -20,6 +21,6 @@
               zarith
               nocrypto
               hex
-              websocket-async
+              cohttp_async_websocket
   )
 )
