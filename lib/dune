@@ -21,6 +21,6 @@
               zarith
               nocrypto
               hex
-              websocket-async
+              cohttp_async_websocket
   )
 )

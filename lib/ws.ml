@@ -82,14 +82,11 @@ end) : CSV_OF_EVENTS with module Event_type = Event_type = struct
         let stat = Core_unix.stat filename in
         if Int64.(equal stat.st_size zero) then
           csv_header t event_type
-        else (
-          Log.Global.debug "ws: no csv header";
+        else
           None
-        )
       with
       | _error ->
         (* This looks confusing, simplify or document *)
-        Log.Global.debug "ws: getting csv header";
         csv_header t event_type
     in
     Out_channel.with_file ~append:true ~binary:false ~fail_if_exists:false
@@ -162,7 +159,7 @@ module Impl (Channel : CHANNEL) = struct
   (** Establishes a web socket client given configuration [Cfg] and optional
       [query], [uri_args] and [nonce] parameters.
 
-      Produces a pipe of [Channel.response] instances. *)
+      Produces a pipe of [(Channel.response, string) result] instances. *)
   let client (module Cfg : Cfg.S) ?query ?uri_args ?nonce () =
     let query =
       Option.map query ~f:(fun l ->
@@ -174,7 +171,7 @@ module Impl (Channel : CHANNEL) = struct
           List.map keys ~f:(fun k -> (k, Map.find_multi map k)) )
     in
     let uri =
-      Uri.make ~host:Cfg.api_host ~scheme:"https" ?query
+      Uri.make ~host:Cfg.api_host ~scheme:"wss" ?query
         ~path:
           (String.concat ~sep:"/"
              ( Channel.path
@@ -182,120 +179,41 @@ module Impl (Channel : CHANNEL) = struct
         ()
     in
     Log.Global.info "Ws.client: uri=%s" (Uri.to_string uri);
-    let host = Option.value_exn ~message:"no host in uri" Uri.(host uri) in
-    let port = Option.value ~default:443 Uri_services.(tcp_port_of_uri uri) in
-    let scheme = Option.value ~default:"wss" Uri.(scheme uri) in
-    let tcp_fun s r w =
-      Socket.(setopt s Opt.nodelay true);
-      ( if String.(equal scheme "https" || equal scheme "wss") then
-          Unix.Inet_addr.of_string_or_getbyname host
-          >>| Ipaddr_unix.of_inet_addr
-          >>= fun addr ->
-          Conduit_async.(
-            connect
-              (`OpenSSL_with_config
-                ("wss", addr, port, Ssl.configure ~version:Tlsv1_2 ()) ) )
-        else
-          return (r, w) )
-      >>= fun (r, w) ->
-      let payload = `Null in
-      let path = Path.to_string Channel.path in
-      let%bind payload =
-        match nonce with
-        | None -> return None
-        | Some nonce ->
-          Nonce.Request.(make ~nonce ~request:path ~payload () >>| to_yojson)
-          >>| fun s -> Yojson.Safe.to_string s |> Option.some
-      in
-      let extra_headers =
-        ( match Channel.authentication with
-        | `Private ->
-          Option.map
-            ~f:(fun p -> Auth.(to_headers (module Cfg) (of_payload p)))
-            payload
-        | `Public -> None )
-        |> Option.value ~default:(Cohttp.Header.init ())
-      in
-      let r, _w =
-        Websocket_async.client_ez ~extra_headers
-          ~heartbeat:Time_ns.Span.(of_int_sec 5)
-          uri r w
-      in
-      Log.Global.info "input pipe established for channel %s" Channel.name;
-      Log.Global.flushed () >>| fun () ->
+    let payload = `Null in
+    let path = Path.to_string Channel.path in
+    let%bind payload =
+      match nonce with
+      | None -> return None
+      | Some nonce ->
+        Nonce.Request.(make ~nonce ~request:path ~payload () >>| to_yojson)
+        >>| fun s -> Yojson.Safe.to_string s |> Option.some
+    in
+    let headers =
+      ( match Channel.authentication with
+      | `Private ->
+        Option.map
+          ~f:(fun p -> Auth.(to_headers (module Cfg) (of_payload p)))
+          payload
+      | `Public -> None )
+      |> Option.value ~default:(Cohttp.Header.init ())
+    in
+    Cohttp_async_websocket.Client.create ~headers uri >>= fun x ->
+    Or_error.ok_exn x |> return >>= fun (_response, ws) ->
+    let r, _w = Websocket.pipes ws in
+    Log.Global.info "input pipe established for channel %s" Channel.name;
+    Log.Global.flushed () >>| fun () ->
+    (* TODO Use polymorphic variants for the error conditions in the pipe *)
+    let pipe =
       Pipe.map r ~f:(fun s ->
-          Yojson.Safe.from_string s |> Channel.response_of_yojson )
+          Log.Global.debug "json of event: %s" s;
+          ( try Yojson.Safe.from_string s |> Result.return with
+          | Yojson.Json_error _ as e -> begin
+            Log.Global.info_s (Exn.sexp_of_t e);
+            Result.Error (Exn.to_string e)
+          end )
+          |> Result.bind ~f:Channel.response_of_yojson )
     in
-
-    let hostport = Host_and_port.create ~host ~port in
-    Tcp.(with_connection Where_to_connect.(of_host_and_port hostport) tcp_fun)
-
-  let handle_client addr reader writer =
-    let addr_str = Socket.Address.(to_string addr) in
-    Log.Global.info "Client connection from %s" addr_str;
-    let app_to_ws, sender_write = Pipe.create () in
-    let receiver_read, ws_to_app = Pipe.create () in
-    let check_request req =
-      let req_str = Format.asprintf "%a" Cohttp.Request.pp_hum req in
-      Log.Global.info "Incoming connnection request: %s" req_str;
-      let path = Cohttp.Request.uri req |> Uri.path in
-      Deferred.return (String.equal path "/ws")
-    in
-    let rec loop () =
-      Pipe.read receiver_read >>= function
-      | `Eof ->
-        Log.Global.info "Client %s disconnected" addr_str;
-        Deferred.unit
-      | `Ok
-          ( { Websocket_async.Frame.opcode; extension = _; final = _; content }
-            as frame ) ->
-        let open Websocket_async.Frame in
-        Log.Global.debug "<- %s" (show frame);
-        let frame', closed =
-          match opcode with
-          | Opcode.Ping -> (Some (create ~opcode:Opcode.Pong ~content ()), false)
-          | Opcode.Close ->
-            (* Immediately echo and pass this last message to the user *)
-            if String.length content >= 2 then
-              ( Some
-                  (create ~opcode:Opcode.Close
-                     ~content:(String.sub content ~pos:0 ~len:2)
-                     () ),
-                true )
-            else
-              (Some (close 100), true)
-          | Opcode.Pong -> (None, false)
-          | Opcode.Text
-          | Opcode.Binary ->
-            (Some frame, false)
-          | _ -> (Some (close 1002), false)
-        in
-        begin
-          match frame' with
-          | None -> Deferred.unit
-          | Some frame' ->
-            Log.Global.debug "-> %s" (show frame');
-            Pipe.write sender_write frame'
-        end
-        >>= fun () ->
-        if closed then
-          Deferred.unit
-        else
-          loop ()
-    in
-    Deferred.any
-      [ begin
-          Websocket_async.server ~check_request ~app_to_ws ~ws_to_app ~reader
-            ~writer ()
-          >>= function
-          | Error err -> (
-            match Error.to_exn err with
-            | Exit -> Deferred.unit
-            | (_ : Exn.t) -> Error.raise err )
-          | Ok () -> Deferred.unit
-        end;
-        loop ()
-      ]
+    pipe
 
   let command =
     let spec : (_, _) Command.Spec.t =
@@ -310,8 +228,12 @@ module Impl (Channel : CHANNEL) = struct
       +> anon (maybe ("uri_args" %: sexp))
     in
     let set_loglevel = function
-      | 2 -> Log.Global.set_level `Info
-      | 3 -> Log.Global.set_level `Debug
+      | 2 ->
+        Log.Global.set_level `Info;
+        Logs.set_level @@ Some Logs.Info
+      | e when e > 2 ->
+        Log.Global.set_level `Debug;
+        Logs.set_level @@ Some Logs.Debug
       | _ -> ()
     in
     let run cfg loglevel query (csv_dir : string option) uri_args () =
