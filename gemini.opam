@@ -24,10 +24,10 @@ depends: [
   "ppx_jane"
   "uri"
   "hex"
-  "yojson" {>= "1.7.0"}
+  "yojson" {>= "2.1.0"}
   "zarith"
   "nocrypto"
-  "ppx_deriving_yojson" {>= "3.6.1"}
+  "ppx_deriving_yojson" {>= "3.7.0"}
   "ppx_csv_conv"
   "csvfields"
   "cohttp_async_websocket"
