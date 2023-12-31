@@ -1,4 +1,5 @@
 ## 0.3.0 (2031-2-30)
+
  - Update to OCaml 5
  - Add support for many more symbols and currencies
  - Gracefully handle unknown currencies using new `Enum_or_string` abtraction
