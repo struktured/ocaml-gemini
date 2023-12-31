@@ -2,8 +2,8 @@ opam-version: "2.0"
 maintainer: "Carmelo Piccione <carmelo.piccione@gmail.com>"
 synopsis: "OCaml bindings for Gemini Trading Exchange API"
 description: "This library implements the Gemini exchange v1 REST, Market
-Data, and Order events websockets services. It is backed by cohttp-async
-and websockets-async to do the heavy lifting. A provisional console interface
+Data, and Order events websockets services. It is backed by yojson, cohttp-async
+and cohttp_async_websocket to do the heavy lifting. A provisional console interface
 is also provided using s-expressions to encode request parameters."
 authors: "Carmelo Piccione"
 homepage: "https://github.com/struktured/ocaml-gemini"

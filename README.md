@@ -1,7 +1,7 @@
 # Introduction
 
 This library implements the Gemini exchange v1 REST, Market Data, and Order events websockets
-services. It is backed by cohttp-async and websockets-async to do the heavy
+services. It is backed by 'yojson', `cohttp-async` and `cohttp_async_websocket` to do the heavy
 lifting. A provisional console interface is also provided using s-expressions to
 encode request parameters.
 
@@ -93,5 +93,7 @@ but will review and accept PRs when time permits.
 - [x] fix unit test harness
 - [x] document code
 - [x] make opam release
+- [ ] rich cli support for order commands
+- [ ] write to binary format instead of csv
+- [ ] switch to eio where applicable
 - [ ] integration test against sandbox environment
-
