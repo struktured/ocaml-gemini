@@ -103,6 +103,32 @@ module type ENUM_STRING = sig
   val to_string : t -> string
 end
 
+module Enum (T : sig
+  type t [@@deriving enumerate, sexp]
+end) : ENUM_STRING with type t = T.t = struct
+  include T
+
+  let to_string t =
+    sexp_of_t t |> function
+    | Sexp.Atom s -> s
+    | sexp ->
+      failwiths ~here:[%here] "Expected string atom but got: %s" sexp Fn.id
+end
+
+module Enum_with_overrides (T : sig
+  type t [@@deriving enumerate, sexp, equal]
+
+  val overrides : (t, string) List.Assoc.t
+end) : ENUM_STRING with type t = T.t = struct
+  include T
+  include Enum (T)
+
+  let to_string t =
+    List.Assoc.find overrides ~equal:T.equal t |> function
+    | Some s -> s
+    | None -> to_string t
+end
+
 (** Produce json encoders and decoders given an enumerated type and its string
     representations. *)
 module Make (E : ENUM_STRING) : S with type t = E.t = struct
@@ -174,7 +200,9 @@ module Make (E : ENUM_STRING) : S with type t = E.t = struct
         let to_string x =
           match x with
           | `Enum x -> to_string x
-          | `String s -> s
+          | `String s ->
+            Log.Global.error "String: %s" s;
+            s
 
         let sexp_of_t t : Sexp.t =
           to_string t |> String.uppercase |> fun s -> Sexp.Atom s

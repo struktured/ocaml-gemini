@@ -139,6 +139,7 @@ module Currency = struct
     type t =
       [ `Eth
       | `Btc
+      | `Doge
       | `Usd
       | `Zec
       | `Bch
@@ -152,42 +153,37 @@ module Currency = struct
       | `Inj
       | `Matic
       | `Ftm
-      | `Doge
       | `Cube
       | `Chz
       | `Dot
       | `Rare
       | `Qnt
+      | `Sol
+      | `Fet
+      | `Imx
+      | `Index
+      | `Rndr
+      | `Gala
+      | `Rbn
+      | `Mpl
+      | `Metis
+      | `Lqty
+      | `Jam
+      | `Fida
+      | `Zbc
+      | `Ali
+      | `Eul
+      | `Iotx
+      | `Avax
+      | `Pepe
       ]
     [@@deriving sexp, enumerate, equal, compare]
-
-    let to_string = function
-      | `Eth -> "eth"
-      | `Btc -> "btc"
-      | `Usd -> "usd"
-      | `Zec -> "zec"
-      | `Bch -> "bch"
-      | `Ltc -> "ltc"
-      | `Luna -> "luna"
-      | `Xtz -> "xtz"
-      | `Ust -> "ust"
-      | `Link -> "link"
-      | `Aave -> "aave"
-      | `Crv -> "crv"
-      | `Inj -> "inj"
-      | `Matic -> "matic"
-      | `Ftm -> "ftm"
-      | `Doge -> "doge"
-      | `Cube -> "cube"
-      | `Chz -> "chz"
-      | `Dot -> "dot"
-      | `Rare -> "rare"
-      | `Qnt -> "qnt"
   end
 
-  include T
+  module Enum = Json.Enum (T)
+  include Enum
 
-  include (Json.Make (T) : Json.S with type t := t)
+  include (Json.Make (Enum) : Json.S with type t := t)
 end
 
 (** A symbol on the gemini exchange - Symbols are two currency names appended
@@ -230,37 +226,6 @@ module Symbol = struct
       ]
     [@@deriving sexp, enumerate, equal, compare]
 
-    let to_string : [< t ] -> string = function
-      | `Btcusd -> "btcusd"
-      | `Bchusd -> "bchusd"
-      | `Bchbtc -> "bchbtc"
-      | `Bcheth -> "bcheth"
-      | `Ethusd -> "ethusd"
-      | `Ethbtc -> "ethbtc"
-      | `Zecusd -> "zecusd"
-      | `Zecbtc -> "zecbtc"
-      | `Zeceth -> "zeceth"
-      | `Zecbch -> "zecbch"
-      | `Zecltc -> "zecltc"
-      | `Ltcusd -> "ltcusd"
-      | `Ltcbtc -> "ltcbtc"
-      | `Ltceth -> "ltceth"
-      | `Ltcbch -> "ltcbch"
-      | `Lunausd -> "lunausd"
-      | `Linkusd -> "linkusd"
-      | `Xtzusd -> "xtzusd"
-      | `Aaveusd -> "aaveusd"
-      | `Crvusd -> "crvusd"
-      | `Injusd -> "injusd"
-      | `Maticusd -> "maticusd"
-      | `Ftmusd -> "ftmusd"
-      | `Dogeusd -> "dogeusd"
-      | `Cubeusd -> "cubeusd"
-      | `Chzusd -> "chzusd"
-      | `Dotusd -> "dotusd"
-      | `Rareusd -> "rareusd"
-      | `Qntusd -> "qntusd"
-
     let to_currency_pair : [< t ] -> Currency.t * Currency.t = function
       | `Btcusd -> (`Btc, `Usd)
       | `Bchusd -> (`Bch, `Usd)
@@ -300,8 +265,10 @@ module Symbol = struct
   end
 
   include T
+  module Enum = Json.Enum (T)
+  include Enum
 
-  include (Json.Make (T) : Json.S with type t := t)
+  include (Json.Make (Enum) : Json.S with type t := t)
 end
 
 (** Represents order types supported on Gemini. *)
