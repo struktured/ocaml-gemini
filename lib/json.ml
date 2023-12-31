@@ -65,6 +65,8 @@ end
 module type S = sig
   type t [@@deriving yojson, enumerate, sexp]
 
+  (** Wraps a string value promoting it to type [`Enum enum] if it is parsable
+      as such, [`String string] otherwise. *)
   module Enum_or_string : sig
     type enum = t [@@deriving enumerate, sexp]
 
