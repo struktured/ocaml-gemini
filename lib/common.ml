@@ -230,42 +230,15 @@ module Symbol = struct
   module Enum = Json.Enum (T)
   include Enum
 
-  let to_currency_pair : [< t ] -> Currency.t * Currency.t = function
-    | `Btcusd -> (`Btc, `Usd)
-    | `Bchusd -> (`Bch, `Usd)
-    | `Bchbtc -> (`Bch, `Btc)
-    | `Bcheth -> (`Bch, `Eth)
-    | `Ethusd -> (`Eth, `Usd)
-    | `Ethbtc -> (`Eth, `Btc)
-    | `Zecusd -> (`Zec, `Usd)
-    | `Zecbtc -> (`Zec, `Btc)
-    | `Zeceth -> (`Zec, `Eth)
-    | `Zecbch -> (`Zec, `Bch)
-    | `Zecltc -> (`Zec, `Ltc)
-    | `Ltcusd -> (`Ltc, `Usd)
-    | `Ltcbtc -> (`Ltc, `Btc)
-    | `Ltceth -> (`Ltc, `Eth)
-    | `Ltcbch -> (`Ltc, `Bch)
-    | `Lunausd -> (`Luna, `Usd)
-    | `Linkusd -> (`Link, `Usd)
-    | `Xtzusd -> (`Xtz, `Usd)
-    | `Aaveusd -> (`Aave, `Usd)
-    | `Crvusd -> (`Crv, `Usd)
-    | `Injusd -> (`Inj, `Usd)
-    | `Maticusd -> (`Matic, `Usd)
-    | `Ftmusd -> (`Ftm, `Usd)
-    | `Cubeusd -> (`Cube, `Usd)
-    | `Chzusd -> (`Chz, `Usd)
-    | `Dotusd -> (`Dot, `Usd)
-    | `Rareusd -> (`Rare, `Usd)
-    | `Qntusd -> (`Qnt, `Usd)
+  let to_currency_pair :
+      [< t ] -> Currency.Enum_or_string.t * Currency.Enum_or_string.t = function
     | #t as c ->
       to_string c |> fun s ->
-      let buy = String.prefix s 3 |> Currency.of_string_opt in
-      let sell = String.suffix s 3 |> Currency.of_string_opt in
-      Option.both buy sell |> Option.value_exn
+      let buy = String.prefix s 3 |> Currency.Enum_or_string.of_string in
+      let sell = String.suffix s 3 |> Currency.Enum_or_string.of_string in
+      (buy, sell)
 
-  let to_currency : [< t ] -> Side.t -> Currency.t =
+  let to_currency : [< t ] -> Side.t -> Currency.Enum_or_string.t =
    fun t side ->
     to_currency_pair t |> fun (buy, sell) ->
     match side with
