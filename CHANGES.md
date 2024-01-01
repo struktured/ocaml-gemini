@@ -8,7 +8,7 @@
  - Switch from `websockets-async` to simpler, better supported `cohttp_async_websocket`.
  - Fix various parse errors due to new gemini fields.
  - Format the codebase with ocamlformat
-
+ - Added --no-csv option to disable csv generation from command line.
 ## 0.2.1 (2019-03-03)
 
 - Write csv headers if target file is empty or does not exist.

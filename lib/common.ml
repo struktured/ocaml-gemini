@@ -134,8 +134,7 @@ end
 (** Represents currencies supported by Gemini. *)
 module Currency = struct
   module T = struct
-    (** An enumerated set of all supported currencies supported currently by
-        Gemini. *)
+    (** An enumerated set of all currencies supported currently by Gemini. *)
     type t =
       [ `Eth
       | `Btc
@@ -225,48 +224,53 @@ module Symbol = struct
       | `Qntusd
       ]
     [@@deriving sexp, enumerate, equal, compare]
-
-    let to_currency_pair : [< t ] -> Currency.t * Currency.t = function
-      | `Btcusd -> (`Btc, `Usd)
-      | `Bchusd -> (`Bch, `Usd)
-      | `Bchbtc -> (`Bch, `Btc)
-      | `Bcheth -> (`Bch, `Eth)
-      | `Ethusd -> (`Eth, `Usd)
-      | `Ethbtc -> (`Eth, `Btc)
-      | `Zecusd -> (`Zec, `Usd)
-      | `Zecbtc -> (`Zec, `Btc)
-      | `Zeceth -> (`Zec, `Eth)
-      | `Zecbch -> (`Zec, `Bch)
-      | `Zecltc -> (`Zec, `Ltc)
-      | `Ltcusd -> (`Ltc, `Usd)
-      | `Ltcbtc -> (`Ltc, `Btc)
-      | `Ltceth -> (`Ltc, `Eth)
-      | `Ltcbch -> (`Ltc, `Bch)
-      | `Lunausd -> (`Luna, `Usd)
-      | `Linkusd -> (`Link, `Usd)
-      | `Xtzusd -> (`Xtz, `Usd)
-      | `Aaveusd -> (`Aave, `Usd)
-      | `Crvusd -> (`Crv, `Usd)
-      | `Injusd -> (`Inj, `Usd)
-      | `Maticusd -> (`Matic, `Usd)
-      | `Ftmusd -> (`Ftm, `Usd)
-      | `Cubeusd -> (`Cube, `Usd)
-      | `Chzusd -> (`Chz, `Usd)
-      | `Dotusd -> (`Dot, `Usd)
-      | `Rareusd -> (`Rare, `Usd)
-      | `Qntusd -> (`Qnt, `Usd)
-
-    let to_currency : [< t ] -> Side.t -> Currency.t =
-     fun t side ->
-      to_currency_pair t |> fun (buy, sell) ->
-      match side with
-      | `Buy -> buy
-      | `Sell -> sell
   end
 
   include T
   module Enum = Json.Enum (T)
   include Enum
+
+  let to_currency_pair : [< t ] -> Currency.t * Currency.t = function
+    | `Btcusd -> (`Btc, `Usd)
+    | `Bchusd -> (`Bch, `Usd)
+    | `Bchbtc -> (`Bch, `Btc)
+    | `Bcheth -> (`Bch, `Eth)
+    | `Ethusd -> (`Eth, `Usd)
+    | `Ethbtc -> (`Eth, `Btc)
+    | `Zecusd -> (`Zec, `Usd)
+    | `Zecbtc -> (`Zec, `Btc)
+    | `Zeceth -> (`Zec, `Eth)
+    | `Zecbch -> (`Zec, `Bch)
+    | `Zecltc -> (`Zec, `Ltc)
+    | `Ltcusd -> (`Ltc, `Usd)
+    | `Ltcbtc -> (`Ltc, `Btc)
+    | `Ltceth -> (`Ltc, `Eth)
+    | `Ltcbch -> (`Ltc, `Bch)
+    | `Lunausd -> (`Luna, `Usd)
+    | `Linkusd -> (`Link, `Usd)
+    | `Xtzusd -> (`Xtz, `Usd)
+    | `Aaveusd -> (`Aave, `Usd)
+    | `Crvusd -> (`Crv, `Usd)
+    | `Injusd -> (`Inj, `Usd)
+    | `Maticusd -> (`Matic, `Usd)
+    | `Ftmusd -> (`Ftm, `Usd)
+    | `Cubeusd -> (`Cube, `Usd)
+    | `Chzusd -> (`Chz, `Usd)
+    | `Dotusd -> (`Dot, `Usd)
+    | `Rareusd -> (`Rare, `Usd)
+    | `Qntusd -> (`Qnt, `Usd)
+    | #t as c ->
+      to_string c |> fun s ->
+      let buy = String.prefix s 3 |> Currency.of_string_opt in
+      let sell = String.suffix s 3 |> Currency.of_string_opt in
+      Option.both buy sell |> Option.value_exn
+
+  let to_currency : [< t ] -> Side.t -> Currency.t =
+   fun t side ->
+    to_currency_pair t |> fun (buy, sell) ->
+    match side with
+    | `Buy -> buy
+    | `Sell -> sell
 
   include (Json.Make (Enum) : Json.S with type t := t)
 end
