@@ -225,6 +225,7 @@ module Impl (Channel : CHANNEL) = struct
            ~doc:
              "PATH output each event type to a separate csv file at PATH. \
               Defaults to current directory."
+      +> Command.Spec.flag "--no-csv" no_arg ~doc:"Disable csv generation."
       +> anon (maybe ("uri_args" %: sexp))
     in
     let set_loglevel = function
@@ -236,7 +237,7 @@ module Impl (Channel : CHANNEL) = struct
         Logs.set_level @@ Some Logs.Debug
       | _ -> ()
     in
-    let run cfg loglevel query (csv_dir : string option) uri_args () =
+    let run cfg loglevel query (csv_dir : string option) no_csv uri_args () =
       let cfg = Cfg.or_default cfg in
       let module Cfg = (val cfg : Cfg.S) in
       Option.iter loglevel ~f:set_loglevel;
@@ -257,7 +258,12 @@ module Impl (Channel : CHANNEL) = struct
         Channel.sexp_of_response response
         |> Sexp.to_string_hum |> sprintf "%s\n"
       in
-      let append_to_csv response =
+      let append_to_csv =
+        if no_csv then
+          fun _ ->
+        ()
+        else
+          fun response ->
         let events = Channel.events_of_response response in
         let all = Channel.Csv_of_event.write_all ?dir:csv_dir events in
         let tags =
