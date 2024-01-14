@@ -226,17 +226,9 @@ type response =
 [@@deriving sexp]
 
 include
-  Ws.CHANNEL
+  Ws.CHANNEL_CLIENT_NO_REQUEST
     with module Event_type := Event_type
     with type uri_args = Symbol.t
-    with type query = unit
     with type response := response
-
-val client :
-  (module Cfg.S) ->
-  ?query:Sexp.t list ->
-  ?uri_args:uri_args ->
-  unit ->
-  (response, string) result Pipe.Reader.t Deferred.t
 
 val command : string * Command.t

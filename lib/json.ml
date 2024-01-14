@@ -65,15 +65,14 @@ end
 module type S = sig
   type t [@@deriving yojson, enumerate, sexp]
 
-  (** Wraps a string value promoting it to type [`Enum enum] if it is parsable
-      as such, [`String string] otherwise. *)
+  (** Wraps a string value promoting it to type [Enum enum] if it is parsable as
+      such, [`String string] otherwise. *)
   module Enum_or_string : sig
     type enum = t [@@deriving enumerate, sexp]
 
     type t =
-      [ `Enum of enum
-      | `String of string
-      ]
+      | Enum of enum
+      | String of string
     [@@deriving yojson, sexp]
 
     include Csvfields.Csv.Stringable with type t := t
@@ -165,21 +164,20 @@ module Make (E : ENUM_STRING) : S with type t = E.t = struct
         type enum = t [@@deriving enumerate, yojson, sexp]
 
         type t =
-          [ `Enum of enum
-          | `String of string
-          ]
+          | Enum of enum
+          | String of string
         [@@deriving yojson, sexp]
 
         let enum_string_of_yojson (json : Yojson.Safe.t) (_ : 'err) :
             (t, string) result =
           match json with
-          | `String _ as s -> Result.Ok s
+          | `String s -> Result.Ok (String s)
           | #Yojson.Safe.t ->
             Result.failf "expected json string but got %S"
               (Yojson.Safe.to_string json)
 
         let enum_of_yojson json =
-          enum_of_yojson json |> Result.map ~f:(fun x -> (`Enum x :> t))
+          enum_of_yojson json |> Result.map ~f:(fun x -> (Enum x :> t))
 
         let of_yojson (json : Yojson.Safe.t) :
             t Ppx_deriving_yojson_runtime.error_or =
@@ -189,8 +187,8 @@ module Make (E : ENUM_STRING) : S with type t = E.t = struct
           match sexp with
           | Sexp.Atom s ->
             Option.value_map (of_string_opt s)
-              ~f:(fun s -> `Enum s)
-              ~default:(`String (String.uppercase s))
+              ~f:(fun s -> Enum s)
+              ~default:(String (String.uppercase s))
           | sexp ->
             failwiths ~here:[%here]
               "invalid sexp expression for enum_or_string type. expected atom \
@@ -199,8 +197,8 @@ module Make (E : ENUM_STRING) : S with type t = E.t = struct
 
         let to_string x =
           match x with
-          | `Enum x -> to_string x
-          | `String s ->
+          | Enum x -> to_string x
+          | String s ->
             Log.Global.error "String: %s" s;
             s
 
@@ -208,13 +206,13 @@ module Make (E : ENUM_STRING) : S with type t = E.t = struct
           to_string t |> String.uppercase |> fun s -> Sexp.Atom s
 
         let to_enum = function
-          | `Enum t -> Some t
-          | `String _ -> None
+          | Enum t -> Some t
+          | String _ -> None
 
-        let of_enum e = `Enum e
+        let of_enum e = Enum e
 
         let of_string s =
-          of_string_opt s |> Option.value_map ~f:of_enum ~default:(`String s)
+          of_string_opt s |> Option.value_map ~f:of_enum ~default:(String s)
       end
 
       include T
