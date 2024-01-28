@@ -376,27 +376,24 @@ module Impl (Channel : CHANNEL) :
 end
 
 (** Create a websocket interface that has no request parameters *)
-module Make_no_request
-    (Channel : CHANNEL with type query = unit)
-(*:  CHANNEL_CLIENT_NO_REQUEST
+module Make_no_request (Channel : CHANNEL with type query = unit) :
+  CHANNEL_CLIENT_NO_REQUEST
     with type response = Channel.response
      and type uri_args = Channel.uri_args
-     and type query = unit *) =
-struct
+     and type query = unit = struct
+  include Channel
   include Impl (Channel)
 
   let client = client ?nonce:None
 end
 
 (** Create a websocket interface with request parameters *)
-module Make
-    (Channel : CHANNEL)
-(*:
+module Make (Channel : CHANNEL) :
   CHANNEL_CLIENT
     with type response = Channel.response
      and type uri_args = Channel.uri_args
-     and type query = Channel.query *) =
-struct
+     and type query = Channel.query = struct
+  include Channel
   include Impl (Channel)
 
   let client (module Cfg : Cfg.S) ~nonce = client (module Cfg) ~nonce
