@@ -31,5 +31,5 @@ depends: [
   "ppx_csv_conv"
   "csvfields"
   "cohttp_async_websocket"
-  "expect_test_helpers"
+  "expect_test_helpers_core" {>= "v0.16.0"}
 ]

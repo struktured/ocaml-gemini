@@ -8,12 +8,20 @@ module type EVENT_CSVABLE = sig
   val events : t list
 end
 
-module type CSV_OF_EVENTS = sig
-  module Event_type : sig
-    include Json.S
+module type EVENT_TYPE = sig
+  type t [@@deriving sexp]
 
-    val equal : t -> t -> bool
-  end
+  include Json.S with type t := t
+
+  include Comparable.S with type t := t
+
+  val equal : t -> t -> bool
+
+  val __t_of_sexp__ : Sexp.t -> t
+end
+
+module type CSV_OF_EVENTS = sig
+  module Event_type : EVENT_TYPE
 
   type t
 
@@ -35,11 +43,8 @@ module type CSV_OF_EVENTS = sig
   val write_all : ?dir:string -> t -> (Event_type.t * int) list
 end
 
-module Csv_of_event (Event_type : sig
-  include Json.S
-
-  include Comparable with type t := t
-end) : CSV_OF_EVENTS with module Event_type = Event_type = struct
+module Csv_of_event (Event_type : EVENT_TYPE) :
+  CSV_OF_EVENTS with module Event_type = Event_type = struct
   type t = (module EVENT_CSVABLE) list Event_type.Map.t
 
   let empty : t = Event_type.Map.empty
@@ -136,11 +141,7 @@ module type CHANNEL = sig
   (** Respone type of the channel. Must have sexp converters and a yojson parser *)
   type response [@@deriving sexp, of_yojson]
 
-  module Event_type : sig
-    include Json.S
-
-    val equal : t -> t -> bool
-  end
+  module Event_type : EVENT_TYPE
 
   module Csv_of_event : CSV_OF_EVENTS with module Event_type = Event_type
 
@@ -154,13 +155,91 @@ module type CHANNEL = sig
   val encode_query : query -> string * string
 end
 
+module Error = struct
+  type t =
+    [ `Json_parse_error of string
+    | `Channel_parse_error of string
+    ]
+  [@@deriving sexp, yojson]
+end
+
+module type RESULT = sig
+  type response [@@deriving sexp, of_yojson]
+
+  type ok = [ `Ok of response ] [@@deriving sexp, of_yojson]
+
+  type t =
+    [ ok
+    | Error.t
+    ]
+  [@@deriving sexp, of_yojson]
+end
+
+module type CHANNEL_CLIENT_BASE = sig
+  include CHANNEL
+
+  module Error : module type of Error
+
+  val command : string * Command.t
+end
+
+module type CHANNEL_CLIENT_INTERNAL = sig
+  include CHANNEL_CLIENT_BASE
+
+  val client :
+    (module Cfg.S) ->
+    ?query:Sexp.t list ->
+    ?uri_args:uri_args ->
+    ?nonce:int Inf_pipe.Reader.t ->
+    unit ->
+    [ `Ok of response | Error.t ] Pipe.Reader.t Deferred.t
+end
+
+module type CHANNEL_CLIENT_NO_REQUEST = sig
+  include CHANNEL_CLIENT_BASE
+
+  val client :
+    (module Cfg.S) ->
+    ?query:Sexp.t list ->
+    ?uri_args:uri_args ->
+    unit ->
+    [ `Ok of response | Error.t ] Pipe.Reader.t Deferred.t
+end
+
+module type CHANNEL_CLIENT = sig
+  include CHANNEL_CLIENT_BASE
+
+  module Error : module type of Error
+
+  val command : string * Command.t
+
+  val client :
+    (module Cfg.S) ->
+    nonce:Nonce.reader ->
+    ?query:Sexp.t list ->
+    ?uri_args:uri_args ->
+    unit ->
+    [ `Ok of response | Error.t ] Pipe.Reader.t Deferred.t
+end
+
 (** Creates a websocket implementation given a [Channel] *)
-module Impl (Channel : CHANNEL) = struct
+module Impl (Channel : CHANNEL) :
+  CHANNEL_CLIENT_INTERNAL
+    with type response := Channel.response
+     and type uri_args = Channel.uri_args
+     and module Event_type = Channel.Event_type
+     and type query = Channel.query
+     and module Error = Error = struct
   (** Establishes a web socket client given configuration [Cfg] and optional
       [query], [uri_args] and [nonce] parameters.
 
       Produces a pipe of [(Channel.response, string) result] instances. *)
-  let client (module Cfg : Cfg.S) ?query ?uri_args ?nonce () =
+
+  include Channel
+  module Error = Error
+
+  let client (module Cfg : Cfg.S) ?query ?uri_args ?nonce () :
+      [ `Ok of response | Error.t ] Pipe.Reader.t Deferred.t =
     let query =
       Option.map query ~f:(fun l ->
           List.fold ~init:String.Map.empty l ~f:(fun map q ->
@@ -200,18 +279,18 @@ module Impl (Channel : CHANNEL) = struct
     Cohttp_async_websocket.Client.create ~headers uri >>= fun x ->
     Or_error.ok_exn x |> return >>= fun (_response, ws) ->
     let r, _w = Websocket.pipes ws in
-    Log.Global.info "input pipe established for channel %s" Channel.name;
     Log.Global.flushed () >>| fun () ->
-    (* TODO Use polymorphic variants for the error conditions in the pipe *)
     let pipe =
       Pipe.map r ~f:(fun s ->
           Log.Global.debug "json of event: %s" s;
-          ( try Yojson.Safe.from_string s |> Result.return with
-          | Yojson.Json_error _ as e -> begin
-            Log.Global.info_s (Exn.sexp_of_t e);
-            Result.Error (Exn.to_string e)
-          end )
-          |> Result.bind ~f:Channel.response_of_yojson )
+          ( try `Ok (Yojson.Safe.from_string s) with
+          | Yojson.Json_error e -> `Json_parse_error e )
+          |> function
+          | #Error.t as e -> e
+          | `Ok json -> (
+            match Channel.response_of_yojson json with
+            | Ok response -> `Ok response
+            | Error e -> `Channel_parse_error e ) )
     in
     pipe
 
@@ -281,9 +360,10 @@ module Impl (Channel : CHANNEL) = struct
       Log.Global.debug "Broadcasting channel %s to stderr..." Channel.name;
       let pipe =
         Pipe.filter_map pipe ~f:(function
-          | Result.Ok ok -> Some ok
-          | Result.Error e ->
-            Log.Global.error "Failed to parse last event: %s" e;
+          | `Ok ok -> Some ok
+          | #Error.t as e ->
+            Log.Global.error "Failed to parse last event: %s"
+              (Error.sexp_of_t e |> Sexp.to_string);
             None )
       in
       Pipe.transfer pipe Writer.(pipe (Lazy.force stderr)) ~f:ok_pipe_reader
@@ -296,15 +376,27 @@ module Impl (Channel : CHANNEL) = struct
 end
 
 (** Create a websocket interface that has no request parameters *)
-module Make_no_request (Channel : CHANNEL) = struct
+module Make_no_request (Channel : CHANNEL with type query = unit) :
+  CHANNEL_CLIENT_NO_REQUEST
+    with type response := Channel.response
+     and type uri_args := Channel.uri_args
+     and module Event_type := Channel.Event_type
+     and type query := unit = struct
+  include Channel
   include Impl (Channel)
 
   let client = client ?nonce:None
 end
 
 (** Create a websocket interface with request parameters *)
-module Make (Channel : CHANNEL) = struct
+module Make (Channel : CHANNEL) :
+  CHANNEL_CLIENT
+    with type response := Channel.response
+     and type uri_args := Channel.uri_args
+     and module Event_type := Channel.Event_type
+     and type query := Channel.query = struct
+  include Channel
   include Impl (Channel)
 
-  let client ~nonce = client ~nonce
+  let client (module Cfg : Cfg.S) ~nonce = client (module Cfg) ~nonce
 end

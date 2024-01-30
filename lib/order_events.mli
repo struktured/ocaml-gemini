@@ -161,18 +161,10 @@ module Event_type : sig
 end
 
 include
-  Ws.CHANNEL
+  Ws.CHANNEL_CLIENT
     with module Event_type := Event_type
     with type uri_args := uri_args
     with type query := query
     with type response := response
 
 val command : string * Async.Command.t
-
-val client :
-  nonce:int Inf_pipe.Reader.t ->
-  (module Cfg.S) ->
-  ?query:Sexp.t list ->
-  ?uri_args:uri_args ->
-  unit ->
-  (response, string) result Pipe.Reader.t Deferred.t
