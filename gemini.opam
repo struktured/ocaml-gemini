@@ -20,7 +20,7 @@ depends: [
   "core" {>= "v0.16.2"}
   "async_ssl"
   "cohttp-async"
-  "dune" {build}
+  "dune" {>= "1.2"}
   "ppx_jane"
   "uri"
   "hex"
