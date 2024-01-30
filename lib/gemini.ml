@@ -6,6 +6,8 @@ module Rest = Rest
 module Result = Json.Result
 module Inf_pipe = Inf_pipe
 
+module Poly_ok = Poly_ok
+
 module V1 = struct
   let path = [ "v1" ]
 

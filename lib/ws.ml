@@ -378,9 +378,10 @@ end
 (** Create a websocket interface that has no request parameters *)
 module Make_no_request (Channel : CHANNEL with type query = unit) :
   CHANNEL_CLIENT_NO_REQUEST
-    with type response = Channel.response
-     and type uri_args = Channel.uri_args
-     and type query = unit = struct
+    with type response := Channel.response
+     and type uri_args := Channel.uri_args
+     and module Event_type := Channel.Event_type
+     and type query := unit = struct
   include Channel
   include Impl (Channel)
 
@@ -390,9 +391,10 @@ end
 (** Create a websocket interface with request parameters *)
 module Make (Channel : CHANNEL) :
   CHANNEL_CLIENT
-    with type response = Channel.response
-     and type uri_args = Channel.uri_args
-     and type query = Channel.query = struct
+    with type response := Channel.response
+     and type uri_args := Channel.uri_args
+     and module Event_type := Channel.Event_type
+     and type query := Channel.query = struct
   include Channel
   include Impl (Channel)
 
