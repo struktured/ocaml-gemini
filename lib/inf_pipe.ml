@@ -36,6 +36,15 @@ module T = struct
   let map = Pipe.map
 
   let filter_map = Pipe.filter_map
+
+  let folding_filter_map = Pipe.folding_filter_map
+
+  let folding_filter_map' = Pipe.folding_filter_map'
+
+  let create :
+      ?size_budget:int -> ?info:Sexp.t -> unit -> 'a Reader.t * 'a Pipe.Writer.t
+      =
+    Pipe.create
 end
 
 module type S = sig
@@ -68,6 +77,23 @@ module type S = sig
   val interleave : 'a Reader.t list -> 'a Reader.t
 
   val to_pipe : 'a Reader.t -> 'a Pipe.Reader.t
+
+  val create :
+    ?size_budget:int -> ?info:Sexp.t -> unit -> 'a Reader.t * 'a Pipe.Writer.t
+
+  val folding_filter_map :
+    ?max_queue_length:int ->
+    'a Reader.t ->
+    init:'b ->
+    f:('b -> 'a -> 'b * 'c option) ->
+    'c Reader.t
+
+  val folding_filter_map' :
+    ?max_queue_length:int ->
+    'a Reader.t ->
+    init:'b ->
+    f:('b -> 'a -> ('b * 'c option) Deferred.t) ->
+    'c Reader.t
 end
 
 include (T : S)
