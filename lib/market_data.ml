@@ -7,7 +7,7 @@ module Side = struct
         [ `Bid
         | `Ask
         ]
-      [@@deriving sexp, enumerate]
+      [@@deriving sexp, enumerate, compare, equal]
 
       let to_string : [< t ] -> string = function
         | `Bid -> "bid"
@@ -21,7 +21,7 @@ module Side = struct
 
   module Auction = struct
     module T = struct
-      type t = [ `Auction ] [@@deriving sexp, enumerate]
+      type t = [ `Auction ] [@@deriving sexp, enumerate, compare, equal]
 
       let to_string = function
         | `Auction -> "auction"
@@ -37,7 +37,7 @@ module Side = struct
       [ Bid_ask.t
       | Auction.t
       ]
-    [@@deriving sexp, enumerate]
+    [@@deriving sexp, enumerate, compare, equal]
 
     let to_string : [< t ] -> string = function
       | #Bid_ask.t as bid_ask -> Bid_ask.to_string bid_ask
@@ -74,7 +74,7 @@ module T = struct
         [ `Update
         | `Heartbeat
         ]
-      [@@deriving sexp, enumerate]
+      [@@deriving sexp, enumerate, compare, equal]
 
       let to_string = function
         | `Update -> "update"
@@ -95,7 +95,7 @@ module T = struct
         | `Auction_open
         | `Block_trade
         ]
-      [@@deriving sexp, enumerate, compare]
+      [@@deriving sexp, enumerate, compare, equal]
 
       let to_string = function
         | `Trade -> "trade"
@@ -140,7 +140,7 @@ module T = struct
         | `Cancel
         | `Initial
         ]
-      [@@deriving sexp, enumerate]
+      [@@deriving sexp, enumerate, compare, equal]
 
       let to_string = function
         | `Place -> "place"
@@ -265,7 +265,7 @@ module T = struct
         [ `Success
         | `Failure
         ]
-      [@@deriving sexp, enumerate]
+      [@@deriving sexp, enumerate, compare, equal]
 
       let to_string = function
         | `Success -> "success"
@@ -312,7 +312,7 @@ module T = struct
         | `Auction_indicative_price
         | `Auction_outcome
         ]
-      [@@deriving sexp, enumerate]
+      [@@deriving sexp, enumerate, compare, equal]
 
       let to_string = function
         | `Auction_open -> "auction_open"

@@ -57,7 +57,7 @@ module Response = struct
         [ `Error
         | `Ok
         ]
-      [@@deriving sexp, enumerate]
+      [@@deriving sexp, enumerate, compare, equal]
 
       let to_string = function
         | `Error -> "error"

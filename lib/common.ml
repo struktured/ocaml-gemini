@@ -175,6 +175,9 @@ module Currency = struct
       | `Iotx
       | `Avax
       | `Pepe
+      | `Ern
+      | `Amp
+      | `Ctx
       ]
     [@@deriving sexp, enumerate, equal, compare]
   end
@@ -222,6 +225,9 @@ module Symbol = struct
       | `Dotusd
       | `Rareusd
       | `Qntusd
+      | `Ernusd
+      | `Ctxusd
+      | `Ampusd
       ]
     [@@deriving sexp, enumerate, equal, compare]
   end

@@ -63,17 +63,17 @@ module type CSVABLE = sig
 end
 
 module type S = sig
-  type t [@@deriving yojson, enumerate, sexp]
+  type t [@@deriving yojson, enumerate, sexp, compare, equal]
 
   (** Wraps a string value promoting it to type [Enum enum] if it is parsable as
       such, [`String string] otherwise. *)
   module Enum_or_string : sig
-    type enum = t [@@deriving enumerate, sexp]
+    type enum = t [@@deriving enumerate, sexp, compare, equal]
 
     type t =
       | Enum of enum
       | String of string
-    [@@deriving yojson, sexp]
+    [@@deriving yojson, sexp, compare, equal]
 
     include Csvfields.Csv.Stringable with type t := t
 
@@ -97,13 +97,13 @@ end
 
 (** An enumeration encodable as a json string. *)
 module type ENUM_STRING = sig
-  type t [@@deriving enumerate, sexp]
+  type t [@@deriving enumerate, sexp, compare, equal]
 
   val to_string : t -> string
 end
 
 module Enum (T : sig
-  type t [@@deriving enumerate, sexp]
+  type t [@@deriving enumerate, sexp, compare, equal]
 end) : ENUM_STRING with type t = T.t = struct
   include T
 
@@ -115,7 +115,7 @@ end) : ENUM_STRING with type t = T.t = struct
 end
 
 module Enum_with_overrides (T : sig
-  type t [@@deriving enumerate, sexp, equal]
+  type t [@@deriving enumerate, sexp, equal, compare, equal]
 
   val overrides : (t, string) List.Assoc.t
 end) : ENUM_STRING with type t = T.t = struct
@@ -161,12 +161,12 @@ module Make (E : ENUM_STRING) : S with type t = E.t = struct
 
     module Enum_or_string = struct
       module T = struct
-        type enum = t [@@deriving enumerate, yojson, sexp]
+        type enum = t [@@deriving enumerate, yojson, sexp, compare, equal]
 
         type t =
           | Enum of enum
           | String of string
-        [@@deriving yojson, sexp]
+        [@@deriving yojson, sexp, compare, equal]
 
         let enum_string_of_yojson (json : Yojson.Safe.t) (_ : 'err) :
             (t, string) result =

@@ -42,7 +42,7 @@ module V1 = struct
         | `Immediate_or_cancel
         | `Auction_only
         ]
-      [@@deriving sexp, enumerate]
+      [@@deriving sexp, enumerate, compare, equal]
 
       let to_string = function
         | `Maker_or_cancel -> "maker_or_cancel"
