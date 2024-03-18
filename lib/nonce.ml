@@ -46,6 +46,8 @@ module File = struct
   let default_filename =
     let root_path = Unix.getenv_exn "HOME" in
     sprintf "%s/.gemini/nonce.txt" root_path
+
+  let default = pipe ~init:default_filename
 end
 
 let _assert_module_file_is_nonce =

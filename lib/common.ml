@@ -175,6 +175,9 @@ module Currency = struct
       | `Iotx
       | `Avax
       | `Pepe
+      | `Ern
+      | `Amp
+      | `Ctx
       ]
     [@@deriving sexp, enumerate, equal, compare]
   end
@@ -222,6 +225,9 @@ module Symbol = struct
       | `Dotusd
       | `Rareusd
       | `Qntusd
+      | `Ernusd
+      | `Ctxusd
+      | `Ampusd
       ]
     [@@deriving sexp, enumerate, equal, compare]
   end
@@ -252,10 +258,15 @@ end
 module Order_type = struct
   module T = struct
     (** The type of order types- only [`Exchange_limit] is currently supported. *)
-    type t = [ `Exchange_limit ] [@@deriving sexp, enumerate, equal, compare]
+    type t =
+      [ `Exchange_limit
+      | `Stop_limit
+      ]
+    [@@deriving sexp, enumerate, equal, compare]
 
     let to_string = function
       | `Exchange_limit -> "exchange limit"
+      | `Stop_limit -> "stop-limit"
   end
 
   include T

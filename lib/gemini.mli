@@ -321,7 +321,7 @@ module V1 : sig
 
     (** The type of a trade volume response, which is a list of list of volumes
         grouped by exchange symbol. *)
-    type response = volume list list [@@deriving sexp]
+    type response = volume list list list [@@deriving sexp]
 
     include
       Rest.Operation.S
@@ -417,6 +417,7 @@ module V1 : sig
   end
 
   module Market_data = Market_data
+  module Order_events = Order_events
 
   val command : Command.t
 end

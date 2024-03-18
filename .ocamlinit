@@ -1,10 +1,11 @@
 #use "topfind";; 
 #thread;;
-#require "core hex async csvfields cohttp-async nocrypto ppx_deriving.runtime ppx_deriving_yojson.runtime ppx_inline_test.runtime-lib ppx_jane zarith uri yojson websocket-async";;
+#require "core hex async csvfields cohttp-async nocrypto ppx_deriving.runtime ppx_deriving_yojson.runtime ppx_inline_test.runtime-lib ppx_jane zarith uri yojson cohttp_async_websocket";;
 
 #load "compiler-libs/ocamlcommon.cma";;
 
 #directory "_build/install/default/lib/gemini";;
+
 #load "gemini.cma";;
 
 open Core;;

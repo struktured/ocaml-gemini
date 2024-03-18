@@ -38,7 +38,7 @@ module T = struct
         | `Cancelled
         | `Closed
         ]
-      [@@deriving sexp, enumerate, compare]
+      [@@deriving sexp, enumerate, compare, compare, equal]
 
       let to_string : t -> string = function
         | `Subscription_ack -> "subscription_ack"
@@ -79,7 +79,7 @@ module T = struct
         | `Cancel
         | `Initial
         ]
-      [@@deriving sexp, enumerate]
+      [@@deriving sexp, enumerate, compare, equal]
 
       let to_string = function
         | `Place -> "place"
@@ -95,7 +95,8 @@ module T = struct
 
   module Reject_reason = struct
     module T = struct
-      type t = [ `Invalid_quantity ] [@@deriving sexp, enumerate]
+      type t = [ `Invalid_quantity ]
+      [@@deriving sexp, enumerate, compare, equal]
 
       let to_string = function
         | `Invalid_quantity -> "InvalidQuantity"
@@ -108,7 +109,7 @@ module T = struct
 
   module Liquidity = struct
     module T = struct
-      type t = [ `Taker ] [@@deriving sexp, enumerate]
+      type t = [ `Taker ] [@@deriving sexp, enumerate, compare, equal]
 
       (* TODO determine other liquidities *)
       let to_string = function
@@ -129,12 +130,12 @@ module T = struct
         fee : Decimal_string.t;
         fee_currency : Currency.t
       }
-    [@@deriving sexp, yojson, fields, csv]
+    [@@deriving sexp, yojson, fields, csv, compare, equal]
   end
 
   module Api_session = struct
     (* TODO make an enum from UI, and whatever the other values are *)
-    type t = string [@@deriving sexp, yojson]
+    type t = string [@@deriving sexp, yojson, compare, equal]
 
     include (
       Csvfields.Csv.Atom (String) : Csvfields.Csv.Csvable with type t := t)
@@ -145,7 +146,7 @@ module T = struct
 
   module Fill_option = struct
     module T = struct
-      type t = Fill.t option [@@deriving yojson, sexp]
+      type t = Fill.t option [@@deriving yojson, sexp, compare, equal]
 
       let of_string = function
         | "" -> None
@@ -192,7 +193,7 @@ module T = struct
         fill : Fill_option.t; [@default None]
         socket_sequence : Int_number.t
       }
-    [@@deriving sexp, yojson, fields, csv]
+    [@@deriving sexp, yojson, fields, csv, compare, equal]
   end
 
   module Event_type_list = Csv_support.List.Make_default (Order_event_type)
@@ -258,7 +259,7 @@ module T = struct
         [ `Order_event
         | `Subscription_ack
         ]
-      [@@deriving sexp, yojson, enumerate, compare]
+      [@@deriving sexp, yojson, enumerate, compare, equal]
 
       let to_string = function
         | `Order_event -> "order_event"

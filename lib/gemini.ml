@@ -5,7 +5,6 @@ module Nonce = Nonce
 module Rest = Rest
 module Result = Json.Result
 module Inf_pipe = Inf_pipe
-
 module Poly_ok = Poly_ok
 
 module V1 = struct
@@ -43,7 +42,7 @@ module V1 = struct
         | `Immediate_or_cancel
         | `Auction_only
         ]
-      [@@deriving sexp, enumerate]
+      [@@deriving sexp, enumerate, compare, equal]
 
       let to_string = function
         | `Maker_or_cancel -> "maker_or_cancel"
@@ -277,7 +276,7 @@ module V1 = struct
 
       type request = unit [@@deriving yojson, sexp]
 
-      type response = volume list list [@@deriving of_yojson, sexp]
+      type response = volume list list list [@@deriving of_yojson, sexp]
     end
 
     include T
