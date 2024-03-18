@@ -276,7 +276,7 @@ module V1 = struct
 
       type request = unit [@@deriving yojson, sexp]
 
-      type response = volume list list [@@deriving of_yojson, sexp]
+      type response = volume list list list [@@deriving of_yojson, sexp]
     end
 
     include T

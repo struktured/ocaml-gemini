@@ -183,6 +183,11 @@ module Make (E : ENUM_STRING) : S with type t = E.t = struct
             t Ppx_deriving_yojson_runtime.error_or =
           Result.on_error (enum_of_yojson json) ~f:(enum_string_of_yojson json)
 
+        let to_yojson (t : t) : Yojson.Safe.t =
+          match t with
+          | Enum enum -> enum_to_yojson enum
+          | String s -> `String s
+
         let t_of_sexp sexp : t =
           match sexp with
           | Sexp.Atom s ->
@@ -198,9 +203,7 @@ module Make (E : ENUM_STRING) : S with type t = E.t = struct
         let to_string x =
           match x with
           | Enum x -> to_string x
-          | String s ->
-            Log.Global.error "String: %s" s;
-            s
+          | String s -> s
 
         let sexp_of_t t : Sexp.t =
           to_string t |> String.uppercase |> fun s -> Sexp.Atom s
